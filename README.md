@@ -54,48 +54,40 @@ Esse módulo é responsável por criar e gerenciar a interface gráfica, permini
 ao usuário interagir com o o software (entrar o texto, configurar parãmetros
 iniciais e iniciar a reprodução musical).
 
-#### Classe interface()
-
-##### Métodos
-
-- desenharInterface()
-- obterTextoEntrada()
-- obterParametrosIniciais()
-- cancelarReprodução()
+- Classe interface()
+  - Métodos
+    - desenharInterface()
+    - obterTextoEntrada()         > Podemos tentar carregar arquivo
+    - obterParametrosIniciais()   > Com base no que foi setado na GUI
+    - cancelarReprodução()
 
 ### Módulo de interpretação
 
 Esse módulo é responsável por processar a entrada e gerar a lista de eventos musicais.
 
-#### Classe interpretador()
+- Classe interpretador()
+  - Métodos
+    - carregarRegras()
+    - interpretar(texto, contexto)  > Função que vai iterar o texto
+    - aplicarRegras(caractere)      > Função que vai aplicar regra caracter por caracter
 
-##### Métodos
-
-- interpretar(texto, contexto)
-- aplicarRegras(caractere)
-
-#### Classe estadoMusical()
-
-Guarda o estado atual da interpretação.
-
-- volumeAtual
-- oitavaAtual
-- instrumentoAtual
-- ultimoCaractere
+- Classe estadoMusical()            > Guarda o estado atual da interpretação.
+  - volumeAtual
+  - oitavaAtual
+  - instrumentoAtual
+  - ultimoCaractere
 
 ### Módulo de geração e eventos
 
 Esse módulo é rsponsável por converter a lista de eventos musicais em uma saída
 reproduzível, seja um arquivo MIDI ou uma reprodução direta.
 
-#### Classe gerador()
-
-##### Métodos
-
-- tocarNota(nota, oitava, volume, instrumento)
-- pausar()
-- alterarInstrumento(IdInstrumento)
-- setBPM(bpm)
+- Classe gerador()
+  - Métodos
+    - tocarNota(nota, oitava, volume, instrumento)
+    - pausar()
+    - alterarInstrumento(IdInstrumento)
+    - setBPM(bpm)
 
 ### Módulo de Regras
 
