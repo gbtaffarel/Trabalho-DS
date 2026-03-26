@@ -3,6 +3,9 @@
 Esse sistema recebe um arquivo de texto e mapeia os caracteres para uma sequência
 e notas musicais ou ações, que poderá ser reproduzida.
 
+Utilizaremos python para o desenvolvimento e optaremos por [mido](https://mido.readthedocs.io/en/latest/#) ou [pygame](https://www.pygame.org/docs/ref/midi.html)
+para a reprodução musical.
+
 ## Tabela de mapeamento
 
 Essa tabela é uma versão inicial e poderá ser alterada.
@@ -57,9 +60,19 @@ iniciais e iniciar a reprodução musical).
 - Classe interface()
   - Métodos
     - desenharInterface()
-    - obterTextoEntrada()         > Podemos tentar carregar arquivo
     - obterParametrosIniciais()   > Com base no que foi setado na GUI
+    - start()
     - cancelarReprodução()
+
+### Módulo de entrada de dados
+
+Esse módulo é responsável por obter e validar a entrada do usuário.
+
+- Classe entradaDados()
+  - Métodos
+    - obterTextoEntrada()         > Podemos tentar carregar arquivo
+    - carregarArquivo(caminho)
+    - validarEntrada(texto)
 
 ### Módulo de interpretação
 
@@ -70,12 +83,6 @@ Esse módulo é responsável por processar a entrada e gerar a lista de eventos 
     - carregarRegras()
     - interpretar(texto, contexto)  > Função que vai iterar o texto
     - aplicarRegras(caractere)      > Função que vai aplicar regra caracter por caracter
-
-- Classe estadoMusical()            > Guarda o estado atual da interpretação.
-  - volumeAtual
-  - oitavaAtual
-  - instrumentoAtual
-  - ultimoCaractere
 
 ### Módulo de geração e eventos
 
@@ -88,6 +95,14 @@ reproduzível, seja um arquivo MIDI ou uma reprodução direta.
     - pausar()
     - alterarInstrumento(IdInstrumento)
     - setBPM(bpm)
+
+### TAD Música
+
+- Classe estadoMusical()          > Guarda o estado atual da interpretação.
+  - volumeAtual
+  - oitavaAtual
+  - instrumentoAtual
+  - ultimoCaractere
 
 ### Módulo de Regras
 
