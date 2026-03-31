@@ -3,6 +3,9 @@
 Esse sistema recebe um arquivo de texto e mapeia os caracteres para uma sequência
 e notas musicais ou ações, que poderá ser reproduzida.
 
+Utilizaremos python para o desenvolvimento e optaremos por [mido](https://mido.readthedocs.io/en/latest/#) ou [pygame](https://www.pygame.org/docs/ref/midi.html)
+para a reprodução musical.
+
 ## Tabela de mapeamento
 
 Essa tabela é uma versão inicial e poderá ser alterada.
@@ -29,15 +32,15 @@ Essa tabela é uma versão inicial e poderá ser alterada.
 |,|Troca para instrumento MIDI #114|
 |Caso contrário|Se o anterior era nota, repete, caso contrário, silencio|
 
-## Requisitos Funcionais:
+## Requisitos Funcionais
 
 1. Ler o texto de entrada na interface gráfica do software.
 2. Interpretar caracteres, aplicando as regras de mapeamento.
 3. Gerar uma saída musical reproduzível.
-4. O usuário deve poder configurar parâmetros iniciais (presets), como BPM, 
+4. O usuário deve poder configurar parâmetros iniciais (presets), como BPM,
 instrumento inicial, oitava padrão, volume, etc.
 
-## Requisitos Não Funcionais:
+## Requisitos Não Funcionais
 
 - Modularidade
 - Baixo acoplameento e alta coesão
@@ -45,3 +48,64 @@ instrumento inicial, oitava padrão, volume, etc.
 - Legibilidade e boas práticas
 - Testabilidade
 - Versionamento
+
+## Módulos e Classes
+
+### Módulo de interface gráfica
+
+Esse módulo é responsável por criar e gerenciar a interface gráfica, perminitndo
+ao usuário interagir com o o software (entrar o texto, configurar parãmetros
+iniciais e iniciar a reprodução musical).
+
+- Classe interface()
+  - Métodos
+    - desenharInterface()
+    - obterParametrosIniciais()   > Com base no que foi setado na GUI
+    - start()
+    - cancelarReprodução()
+
+### Módulo de entrada de dados
+
+Esse módulo é responsável por obter e validar a entrada do usuário.
+
+- Classe entradaDados()
+  - Métodos
+    - obterTextoEntrada()         > Podemos tentar carregar arquivo
+    - carregarArquivo(caminho)
+    - validarEntrada(texto)
+
+### Módulo de interpretação
+
+Esse módulo é responsável por processar a entrada e gerar a lista de eventos musicais.
+
+- Classe interpretador()
+  - Métodos
+    - carregarRegras()
+    - interpretar(texto, contexto)  > Função que vai iterar o texto
+    - aplicarRegras(caractere)      > Função que vai aplicar regra caracter por caracter
+
+### Módulo de geração e eventos
+
+Esse módulo é rsponsável por converter a lista de eventos musicais em uma saída
+reproduzível, seja um arquivo MIDI ou uma reprodução direta.
+
+- Classe gerador()
+  - Métodos
+    - tocarNota(nota, oitava, volume, instrumento)
+    - pausar()
+    - alterarInstrumento(IdInstrumento)
+    - setBPM(bpm)
+
+### TAD Música
+
+- Classe estadoMusical()          > Guarda o estado atual da interpretação.
+  - volumeAtual
+  - oitavaAtual
+  - instrumentoAtual
+  - ultimoCaractere
+
+### Módulo de Regras
+
+Esse módulo visa aumentar a extensibilidade do software e atender ao critério de
+open/closed, sendo responsável por definir as regras de mapeamento entre caracteres
+e eventos musicais, ao invés de ter essas regras hardcoded no módulo de interpretação.
