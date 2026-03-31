@@ -109,3 +109,7 @@ reproduzível, seja um arquivo MIDI ou uma reprodução direta.
 Esse módulo visa aumentar a extensibilidade do software e atender ao critério de
 open/closed, sendo responsável por definir as regras de mapeamento entre caracteres
 e eventos musicais, ao invés de ter essas regras hardcoded no módulo de interpretação.
+
+### Croqui da interface
+
+![croqui](croqui.png)
