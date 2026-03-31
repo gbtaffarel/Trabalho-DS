@@ -86,7 +86,7 @@ Esse módulo é responsável por processar a entrada e gerar a lista de eventos 
 
 ### Módulo de geração e eventos
 
-Esse módulo é rsponsável por converter a lista de eventos musicais em uma saída
+Esse módulo é responsável por converter a lista de eventos musicais em uma saída
 reproduzível, seja um arquivo MIDI ou uma reprodução direta.
 
 - Classe gerador()
