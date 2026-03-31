@@ -86,7 +86,7 @@ Esse módulo é responsável por processar a entrada e gerar a lista de eventos 
 
 ### Módulo de geração e eventos
 
-Esse módulo é rsponsável por converter a lista de eventos musicais em uma saída
+Esse módulo é responsável por converter a lista de eventos musicais em uma saída
 reproduzível, seja um arquivo MIDI ou uma reprodução direta.
 
 - Classe gerador()
@@ -109,3 +109,7 @@ reproduzível, seja um arquivo MIDI ou uma reprodução direta.
 Esse módulo visa aumentar a extensibilidade do software e atender ao critério de
 open/closed, sendo responsável por definir as regras de mapeamento entre caracteres
 e eventos musicais, ao invés de ter essas regras hardcoded no módulo de interpretação.
+
+### Croqui da interface
+
+![croqui](croqui.png)
