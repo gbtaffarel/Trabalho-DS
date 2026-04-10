@@ -1,79 +1,74 @@
+import os
 from reader import reader
 from translator import translator
 from midigen import midigen
 from midi2audio import FluidSynth
-
-def addNota(nota):
-    note = nota + (midi.get_oitava() + 1) * 12
-    midi.add(note)
-    return note
-
-def zeraVolume():
-    volume = midi.get_volume()
-    midi.set_volume(0)
-    midi.add(standard_note)
-    midi.set_volume(volume)
-
-def dobrarVolume():
-    volume = midi.get_volume()
-    volume = volume * 2
-    if volume > 127:
-        volume = volume - 127
-    midi.set_volume(volume)
-
-def trocarInstrumento(id_instrumento):
-    midi.set_instrument(id_instrumento)
-
-print("Gerador de Trilha Sonora (TESTE)")
-print("Insira a localização de um arquivo .txt")
-path = input()
+from interpretador import Interpretador
 
 
-text = reader(path)
-text.load()
+def main():
+    print("=" * 40)
+    print(" Gerador de Trilha Sonora - Fase 1/2 ")
+    print("=" * 40)
 
-translate = translator()
+    # 1. Entrada de Dados (Pode ser substituído pela UI do customtkinter no futuro)
+    path = input("\nInsira o caminho do arquivo .txt (ex: natal.txt): ").strip()
 
-midi = midigen(127, 120, 1, 4)
+    if not os.path.exists(path):
+        print(
+            f"\n[ERRO] Arquivo '{path}' não encontrado. Verifique o caminho e tente novamente."
+        )
+        return
 
-standard_note = 60
-last_note = False
-last_note_value = 0
+    print("\nInicializando módulos...")
 
-for i in range (text.length()):
-    next_char = text.next()
-    instruction = translate.translate(next_char)
-    if isinstance(instruction, int):
-        last_note_value = addNota(instruction)
-        last_note = True
+    # 2. Instanciação e Injeção de Dependências
+    try:
+        texto = reader(path)
+        texto.load()
+
+        tradutor = translator()
+        # Inicializando o gerador MIDI com os presets padrão (volume max, 120 BPM, Piano, 4ª Oitava)
+        midi = midigen(volume=127, bpm=120, instrument=1, oitava=4)
+
+        # Injetamos o gerador e o tradutor dentro do interpretador (Dependency Inversion Principle)
+        interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
+
+        print("Lendo e interpretando o arquivo...")
+
+        # 3. Execução da Regra de Negócio
+        interpretador.interpretar(texto)
+
+    except Exception as e:
+        print(f"\n[ERRO FATAL] Ocorreu um problema durante a interpretação: {e}")
+        return
+
+    # 4. Saída e Salvamento de Dados
+    arquivo_midi_saida = "saida_gerada.mid"
+    arquivo_audio_saida = "saida_gerada.wav"
+    soundfont_path = "FluidR3_GM.sf2"
+
+    print("Gerando arquivo MIDI...")
+    midi.save_mid(arquivo_midi_saida)
+    print(f"[SUCESSO] Arquivo MIDI salvo como: {arquivo_midi_saida}")
+
+    # Conversão opcional para WAV, apenas se o SoundFont estiver presente
+    if os.path.exists(soundfont_path):
+        print("Convertendo MIDI para áudio (WAV)...")
+        try:
+            fs = FluidSynth(soundfont_path)
+            fs.midi_to_audio(arquivo_midi_saida, arquivo_audio_saida)
+            print(f"[SUCESSO] Áudio WAV salvo como: {arquivo_audio_saida}")
+        except Exception as e:
+            print(f"\n[AVISO] Falha ao converter para WAV: {e}")
     else:
-        if instruction[0] == "volume":
-            if instruction[1] == 0:
-                zeraVolume()
-            elif instruction[1] == 2:
-                dobrarVolume()
-        elif instruction[0] == "instrument":
-            instrument_replace = instruction[1]
-        elif instruction[0] == "instrument+":
-            instrument_replace = instruction[1] + midi.get_instrument
-            if (instrument_replace > 127):
-                instrument_replace = instrument_replace - 127
-            midi.set_instrument(instrument_replace)
-        elif instruction[0] == "consonant":
-            if last_note:
-                midi.add(last_note_value)
-            else:
-                volume = midi.get_volume()
-                midi.set_volume(0)
-                midi.add(standard_note)
-                midi.set_volume(volume)
-        elif instruction[0] == "oitava":
-            if midi.get_oitava() + 1 <= 9:
-                midi.set_oitava(midi.get_oitava() + 1)
-        last_note = False
+        print(f"\n[AVISO] Soundfont '{soundfont_path}' não encontrado no diretório.")
+        print(
+            "A geração de áudio (.wav) foi ignorada. Você ainda pode ouvir o .mid gerado em qualquer player."
+        )
 
-midi.save_mid("teste.mid")
 
-fs = FluidSynth("FluidR3_GM.sf2")
-fs.midi_to_audio("teste.mid", "saida.wav")
-
+if __name__ == "__main__":
+    # Esse bloco __main__ garante que o código só rode se o arquivo for executado diretamente,
+    # prevenindo execuções acidentais caso main.py seja importado em scripts de teste.
+    main()
