@@ -1,6 +1,3 @@
-# interpretador.py
-
-
 class Interpretador:
     def __init__(self, gerador_midi, tradutor):
         """
@@ -11,7 +8,7 @@ class Interpretador:
         self.tradutor = tradutor
 
         # Estado Musical (Poderia ser um TAD "EstadoMusical" separado,
-        # conforme você idealizou no README)
+        # conforme idealizado no README)
         self.standard_note = 60
         self.last_note = False
         self.last_note_value = 0

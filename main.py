@@ -53,6 +53,7 @@ def main():
     print(f"[SUCESSO] Arquivo MIDI salvo como: {arquivo_midi_saida}")
 
     # Conversão opcional para WAV, apenas se o SoundFont estiver presente
+    # Verificar se possivel converter para MP3
     if os.path.exists(soundfont_path):
         print("Convertendo MIDI para áudio (WAV)...")
         try:
