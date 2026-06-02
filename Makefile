@@ -57,11 +57,11 @@ endif
 
 run:
 	@echo "Iniciando Gerador de Trilhas Sonoras..."
-	$(PYTHON) interface.py
+	$(PYTHON) src/interface.py
 
 run-cli:
 	@echo "Executando em modo CLI..."
-	$(PYTHON) main.py --cli --file natal.txt
+	$(PYTHON) src/main.py --cli --file natal.txt
 
 clean:
 	@echo "Limpando arquivos de saída..."
