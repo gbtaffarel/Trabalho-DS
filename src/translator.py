@@ -38,8 +38,8 @@ class translator:
         if c in "jklmnpqrstvwxyz":
             return ["consonant"]
 
-        if isinstance(c, int) and c % 2 == 0:
-            return ["instrument+", c]
+        if char.isdigit() and int(char) % 2 == 0:
+            return ["instrument+", int(char)]
 
         if c == "?":
             return ["oitava"]
@@ -47,7 +47,7 @@ class translator:
         if c == "\n":
             return ["instrument", 123]
 
-        if c == ";" or isinstance(c, int) and c % 2 != 0:
+        if c == ";" or (char.isdigit() and int(char) % 2 != 0):
             return ["instrument", 15]
 
         if c == ",":

@@ -405,17 +405,72 @@ def criar_interface(gerador_callback=None):
     return Interface(gerador_callback)
 
 
-if __name__ == "__main__":
-    # Demonstração standalone
-    def demo_callback(dados):
-        print("Dados recebidos:")
-        print(f"  Texto: {dados['texto'][:50]}...")
-        print(f"  BPM: {dados['bpm']}")
-        print(f"  Vozes configuradas: {len(dados['vozes'])}")
-        for v in dados['vozes']:
-            print(f"    V{v['voz_id']}: Inst={v['instrumento']}, "
-                  f"Vol={v['volume']}, Oit={v['oitava_base']}, Delay={v['delay']}")
-        return "saida_demo.mid"
+def gerar_midi(dados):
+    """
+    Função que conecta a interface ao interpretador e gera o MIDI real.
 
-    app = criar_interface(demo_callback)
+    Args:
+        dados: dict com 'texto', 'bpm' e 'vozes'
+
+    Returns:
+        str: Caminho do arquivo MIDI gerado
+    """
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+    from reader import reader
+    from translator import translator
+    from midigen import midigen
+    from interpretador import Interpretador
+    from io import StringIO
+
+    texto = dados['texto']
+    bpm = dados['bpm']
+    vozes = dados['vozes']
+
+    arquivo_midi = "saida_gerada.mid"
+
+    try:
+        # Usa primeira voz para parâmetros principais
+        voz_principal = vozes[0] if vozes else {}
+
+        midi = midigen(
+            volume=voz_principal.get('volume', 100),
+            bpm=bpm,
+            instrument=voz_principal.get('instrumento', 1),
+            oitava=voz_principal.get('oitava_base', 4)
+        )
+
+        tradutor = translator()
+        interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
+
+        # Reader simulado com StringIO para receber texto direto
+        class ReaderSimulado:
+            def __init__(self, texto):
+                self.content = texto
+                self.pos = 0
+
+            def length(self):
+                return len(self.content)
+
+            def next(self):
+                if self.pos < len(self.content):
+                    c = self.content[self.pos]
+                    self.pos += 1
+                    return c
+                return None
+
+        reader_simulado = ReaderSimulado(texto)
+        interpretador.interpretar(reader_simulado)
+
+        midi.save_mid(arquivo_midi)
+        return arquivo_midi
+
+    except Exception as e:
+        raise RuntimeError(f"Falha na geração: {e}")
+
+
+if __name__ == "__main__":
+    app = criar_interface(gerar_midi)
     app.iniciar()
