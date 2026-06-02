@@ -4,6 +4,9 @@
 import os
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
+import threading
+import time
+from reprodutor import Reprodutor
 
 
 class Interface:
@@ -29,12 +32,17 @@ class Interface:
         # Janela principal
         self.janela = ctk.CTk()
         self.janela.title("Gerador de Trilhas Sonoras - Fase 2")
-        self.janela.geometry("900x700")
+        self.janela.geometry("900x750")
         self.janela.resizable(True, True)
 
         # Estado das vozes
         self.vozes_configs = []
         self.max_vozes = 4
+
+        # Player
+        self.player = Reprodutor()
+        self.player_thread = None
+        self.playing = False
 
         self._criar_layout()
 
@@ -226,6 +234,62 @@ class Interface:
         )
         self.btn_limpar.pack(side="right", padx=5)
 
+        # === PLAYER CONTROLS ===
+        frame_player = ctk.CTkFrame(frame_principal)
+        frame_player.pack(padx=10, pady=10, fill="x")
+
+        self.btn_play = ctk.CTkButton(
+            frame_player,
+            text="▶️ Play",
+            command=self._tocar_musica,
+            width=100,
+            fg_color="green",
+            hover_color="darkgreen"
+        )
+        self.btn_play.pack(side="left", padx=5)
+
+        self.btn_pause = ctk.CTkButton(
+            frame_player,
+            text="⏸️ Pausar",
+            command=self._pausar_musica,
+            width=100
+        )
+        self.btn_pause.pack(side="left", padx=5)
+
+        self.btn_stop = ctk.CTkButton(
+            frame_player,
+            text="⏹️ Parar",
+            command=self._parar_musica,
+            width=100,
+            fg_color="red",
+            hover_color="darkred"
+        )
+        self.btn_stop.pack(side="left", padx=5)
+
+        # Barra de progresso
+        self.progresso_frame = ctk.CTkFrame(frame_player)
+        self.progresso_frame.pack(padx=10, pady=10, fill="x")
+
+        self.progresso_label = ctk.CTkLabel(
+            self.progresso_frame,
+            text="Progresso:",
+            font=("Helvetica", 12)
+        )
+        self.progresso_label.pack(side="left", padx=10)
+
+        self.progresso_bar = ctk.CTkProgressBar(self.progresso_frame, width=400, height=20)
+        self.progresso_bar.pack(side="left", padx=10, fill="x", expand=True)
+        self.progresso_bar.set(0)  # Inicializa a barra de progresso
+
+        # === BARRA DE STATUS ===
+        self.status_label = ctk.CTkLabel(
+            self.janela,
+            text="Pronto. Insira o texto musical e configure as vozes.",
+            font=("Helvetica", 11),
+            text_color="gray"
+        )
+        self.status_label.pack(pady=10)
+
         # === BARRA DE STATUS ===
         self.status_label = ctk.CTkLabel(
             self.janela,
@@ -342,6 +406,8 @@ class Interface:
                 if resultado:
                     self._atualizar_status(f"MIDI gerado com sucesso: {resultado}")
                     messagebox.showinfo("Sucesso", f"Arquivo MIDI gerado:\n{resultado}")
+                    # Atualiza o player para o novo arquivo
+                    self.player.current_file = resultado
                 else:
                     self._atualizar_status("Erro na geração do MIDI.")
             except Exception as e:
@@ -353,6 +419,59 @@ class Interface:
     def _atualizar_status(self, mensagem):
         """Atualiza a mensagem na barra de status."""
         self.status_label.configure(text=mensagem)
+
+    def _tocar_musica(self):
+        """Toca o arquivo MIDI gerado."""
+        if not os.path.exists("saida_gerada.mid"):
+            messagebox.showwarning("Aviso", "Nenhum arquivo MIDI gerado ainda.")
+            return
+
+        try:
+            self.player.tocar("saida_gerada.mid")
+            self.playing = True
+            self._atualizar_status("Reproduzindo...")
+            self._atualizar_progresso()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao reproduzir: {e}")
+
+    def _pausar_musica(self):
+        """Pausa ou despausa a reprodução."""
+        if self.player.esta_tocando():
+            self.player.pausar()
+            self.playing = False
+            self._atualizar_status("Pausado")
+        elif self.player.esta_pausado():
+            self.player.despausar()
+            self.playing = True
+            self._atualizar_status("Reproduzindo...")
+            self._atualizar_progresso()
+        else:
+            # Se não está tocando nem pausado, tenta tocar
+            self._tocar_musica()
+
+    def _parar_musica(self):
+        """Para a reprodução."""
+        self.player.parar()
+        self.playing = False
+        self.progresso_bar.set(0)
+        self._atualizar_status("Reprodução parada")
+
+    def _atualizar_progresso(self):
+        """Atualiza a barra de progresso durante a reprodução."""
+        if self.playing:
+            # Esta é uma implementação simplificada
+            # Em uma implementação real, você precisaria obter a duração total da música
+            # e a posição atual de reprodução
+            def update_progress():
+                while self.playing and self.player.esta_ativo():
+                    # Atualiza a barra de progresso a cada 100ms
+                    self.progresso_bar.set(min(self.progresso_bar.get() + 0.01, 1.0))
+                    time.sleep(0.1)
+                if not self.playing:
+                    self.progresso_bar.set(0)
+            
+            # Inicia a thread de atualização
+            threading.Thread(target=update_progress, daemon=True).start()
 
     def iniciar(self):
         """Inicia o loop principal da interface."""

@@ -29,11 +29,13 @@ ENV/
 *.sf2
 *.dls
 *.pdf
+*.md
 
 # ==========================================
 # Configurações de IDEs e OS
 # ==========================================
 .vscode/
+.qwen/
 .idea/
 __pycache__/
 .DS_Store
