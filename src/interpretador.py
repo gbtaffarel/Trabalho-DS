@@ -1,3 +1,31 @@
+from dataclasses import dataclass
+from translator import Nota, Comando
+
+
+@dataclass
+class EstadoVoz:
+    id_voz: int
+    oitava_atual: int
+    volume_atual: int
+    instrumento_atual: int
+    ultima_nota: int = 60
+    tocou_nota: bool = False
+
+    @classmethod
+    def criar(cls, id_voz: int):
+        ciclo_oitavas = [6, 5, 4, 3]
+        ciclo_volumes = [100, 80, 60, 40]
+        ciclo_instrumentos = [6, 20, 0, 70]
+
+        idx = id_voz % 4
+        return cls(
+            id_voz=id_voz,
+            oitava_atual=ciclo_oitavas[idx],
+            volume_atual=ciclo_volumes[idx],
+            instrumento_atual=ciclo_instrumentos[idx],
+        )
+
+
 class Interpretador:
     def __init__(self, gerador_midi, tradutor):
         """
@@ -7,11 +35,15 @@ class Interpretador:
         self.gerador_midi = gerador_midi
         self.tradutor = tradutor
 
-        # Estado Musical (Poderia ser um TAD "EstadoMusical" separado,
-        # conforme idealizado no README)
-        self.standard_note = 60
-        self.last_note = False
-        self.last_note_value = 0
+        self._regras = {
+            "volume": self._dobrar_volume,
+            "instrumento": self._mudar_instrumento,
+            "oitava": self._mudar_oitava,
+            "atraso": self._aplicar_atraso,
+            "bpm": self._mudar_bpm,
+            "pausa": self._tocar_pausa,
+            "consoante": self._tocar_consoante,
+        }
 
     def interpretar(self, texto_reader):
         """
@@ -23,94 +55,58 @@ class Interpretador:
             linha = texto_reader.next_line()  # Obter a próxima linha
             if linha is None:
                 break
-            
-            # Processar cada caractere na linha
-            for caractere in linha:
-                if caractere is None:
-                    break
 
-                instrucao = self.tradutor.translate(caractere)
-                self._aplicar_regras(instrucao, track_index)
-            
-            # Avançar para a próxima faixa
-            track_index = (track_index + 1) % 4
-            # Resetar o reader para a próxima linha
-            texto_reader.reset()
+            estado = EstadoVoz.criar(track_index)
 
-    def interpretar_linha(self, linha, track_index):
-        """
-        Interpreta uma única linha de texto (uma voz) e aplica as regras.
-        """
-        for caractere in linha:
-            if caractere is None:
-                break
+            self.gerador_midi.set_instrument(estado.instrumento_atual, track_index)
 
-            instrucao = self.tradutor.translate(caractere)
-            self._aplicar_regras(instrucao, track_index)
+            instrucoes = self.tradutor.analisar_linha(linha)
 
-    def _aplicar_regras(self, instrucao, track_index):
-        """
-        Método privado que traduz a instrução em ações reais no MIDI.
-        """
-        # Se a instrução for um inteiro (Nota Musical)
-        if isinstance(instrucao, int):
-            nota_real = instrucao + (self.gerador_midi.get_oitava() + 1) * 12
-            self.gerador_midi.add(nota_real, track_index)
-
-            # Atualiza o estado
-            self.last_note_value = nota_real
-            self.last_note = True
-            return
-
-        # Se a instrução for um comando/ação (Lista)
-        comando = instrucao[0]
-
-        if comando == "volume":
-            valor = instrucao[1]
-            if valor == 0:
-                self._tocar_silencio(track_index)
-            elif valor == 2:
-                self._dobrar_volume(track_index)
-
-        elif comando == "instrument":
-            self.gerador_midi.set_instrument(instrucao[1])
-
-        elif comando == "instrument+":
-            # BUG CORRIGIDO: get_instrument() com parênteses
-            novo_inst = instrucao[1] + self.gerador_midi.get_instrument()
-            if novo_inst > 127:
-                novo_inst = 127  # Ajustado para o limite máximo
-            self.gerador_midi.set_instrument(novo_inst)
-
-        elif comando == "consonant":
-            if self.last_note:
-                self.gerador_midi.add(self.last_note_value, track_index)
-            else:
-                self._tocar_silencio(track_index)
-
-        elif comando == "oitava":
-            oitava_atual = self.gerador_midi.get_oitava()
-            if oitava_atual + 1 <= 9:
-                self.gerador_midi.set_oitava(oitava_atual + 1)
-
-        # Reseta o estado da última nota se o comando não repetiu a nota
-        if comando != "consonant":
-            self.last_note = False
+            for instrucao in instrucoes:
+                if isinstance(instrucao, Nota):
+                    self._tocar_nota(instrucao.valor, estado, track_index)
+                elif isinstance(instrucao, Comando):
+                    funcao = self._regras.get(instrucao.acao)
+                    if funcao:
+                        funcao(instrucao.parametro, estado, track_index)
+            track_index += 1
 
     # --- Métodos auxiliares privados (Clean Code) ---
 
-    def _tocar_silencio(self, track_index):
-        """Simula um silêncio zerando o volume temporariamente."""
-        vol_atual = self.gerador_midi.get_volume()
-        self.gerador_midi.set_volume(0)
-        self.gerador_midi.add(self.standard_note, track_index)
-        self.gerador_midi.set_volume(vol_atual)
+    def _tocar_nota(self, valor_base, estado: EstadoVoz, track_index):
+        """Toca uma nota considerando a oitava atual."""
+        nota_real = valor_base + (estado.oitava_atual + 1) * 12
+        self.gerador_midi.add(nota_real, track_index, volume=estado.volume_atual)
+        estado.ultima_nota = nota_real
+        estado.tocou_nota = True
 
-    def _dobrar_volume(self, track_index):
-        """Dobra o volume respeitando o limite do MIDI (127)."""
-        vol_atual = self.gerador_midi.get_volume()
-        novo_vol = vol_atual * 2
-        # Correção com base no Enunciado Fase 1 (se exceder, recebe o máximo)
+    def _dobrar_volume(self, parametro, estado: EstadoVoz, track_index):
+        """Dobra o volume local da voz, respeitando o limite máximo de 127."""
+        novo_vol = estado.volume_atual * 2
         if novo_vol > 127:
             novo_vol = 127
-        self.gerador_midi.set_volume(novo_vol)
+        estado.volume_atual = novo_vol
+
+    def _mudar_instrumento(self, parametro, estado: EstadoVoz, track_index):
+        return
+
+    def _mudar_oitava(self, parametro, estado: EstadoVoz, track_index):
+        """Aumenta ou diminui a oitava atual da voz. O parâmetro é um inteiro positivo ou negativo."""
+        nova_oitava = estado.oitava_atual + parametro
+        if 0 <= nova_oitava <= 9:
+            estado.oitava_atual = nova_oitava
+
+    def _aplicar_atraso(self, parametro, estado: EstadoVoz, track_index):
+        return
+
+    def _mudar_bpm(self, parametro, estado: EstadoVoz, track_index):
+        return
+
+    def _tocar_pausa(self, parametro, estado: EstadoVoz, track_index):
+        """Simula silencio"""
+        self.gerador_midi.add(0, track_index, volume=0)
+        estado.tocou_nota = False
+        return
+
+    def _tocar_consoante(self, parametro, estado: EstadoVoz, track_index):
+        return
