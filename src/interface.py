@@ -23,7 +23,7 @@ class Interface:
 
         self.janela = ctk.CTk()
         self.janela.title("Gerador de Trilhas Sonoras - Fase 2")
-        self.janela.geometry("900x750")
+        self.janela.geometry("900x1000")
         self.janela.resizable(True, True)
 
         self.vozes_configs = []
@@ -43,13 +43,6 @@ class Interface:
         )
         titulo.pack(pady=20)
 
-        subtitulo = ctk.CTkLabel(
-            self.janela,
-            text="Estilo Fuga de Bach - Múltiplas Vozes",
-            font=("Helvetica", 14),
-        )
-        subtitulo.pack(pady=(0, 20))
-
         frame_principal = ctk.CTkFrame(self.janela)
         frame_principal.pack(padx=20, pady=10, fill="both", expand=True)
 
@@ -66,7 +59,7 @@ class Interface:
 
         hint_texto = ctk.CTkLabel(
             frame_texto,
-            text="Dica: Use [n] no início da linha para atraso de entrada (ex: [4]CEGA)",
+            text="Dica: Use [n] no início da linha para atraso de entrada (ex: [4]CCEAGA)",
             font=("Helvetica", 10),
             text_color="gray",
         )
@@ -115,56 +108,74 @@ class Interface:
         )
         label_vozes.pack(anchor="w", padx=10, pady=5)
 
-        frame_headers = ctk.CTkFrame(frame_vozes, fg_color="transparent")
-        frame_headers.pack(fill="x", padx=10, pady=2)
+        # Usamos um sub-frame transparente que utilizará o sistema GRID (Grade/Tabela)
+        frame_tabela = ctk.CTkFrame(frame_vozes, fg_color="transparent")
+        frame_tabela.pack(fill="x", padx=10, pady=2)
 
-        ctk.CTkLabel(frame_headers, text="Voz", width=60).pack(side="left", padx=2)
-        ctk.CTkLabel(frame_headers, text="Instrumento (0-127)", width=120).pack(
-            side="left", padx=2
+        # Cabeçalhos da Tabela (Linha 0)
+        # Note o columnspan=2 em Volume e Oitava Base para mesclar células (Slider + Valor)
+        ctk.CTkLabel(frame_tabela, text="Voz", width=60).grid(
+            row=0, column=0, padx=2, pady=2
         )
-        ctk.CTkLabel(frame_headers, text="Volume", width=80).pack(side="left", padx=2)
-        ctk.CTkLabel(frame_headers, text="Oitava Base", width=80).pack(
-            side="left", padx=2
+        ctk.CTkLabel(frame_tabela, text="Instrumento (0-127)", width=120).grid(
+            row=0, column=1, padx=2, pady=2
         )
-        ctk.CTkLabel(frame_headers, text="Atraso", width=60).pack(side="left", padx=2)
+        ctk.CTkLabel(frame_tabela, text="Volume").grid(
+            row=0, column=2, columnspan=2, padx=2, pady=2
+        )
+        ctk.CTkLabel(frame_tabela, text="Oitava Base").grid(
+            row=0, column=4, columnspan=2, padx=2, pady=2
+        )
+        ctk.CTkLabel(frame_tabela, text="Atraso", width=60).grid(
+            row=0, column=6, padx=2, pady=2
+        )
 
-        self.frames_voz = []
+        self.vozes_configs = []
         for i in range(self.max_vozes):
-            frame_voz = ctk.CTkFrame(frame_vozes, fg_color="transparent")
-            frame_voz.pack(fill="x", padx=10, pady=2)
-            self.frames_voz.append(frame_voz)
+            # Coluna 0: Nome da Voz
+            ctk.CTkLabel(frame_tabela, text=f"V{i}", width=60).grid(
+                row=i + 1, column=0, padx=2, pady=5
+            )
 
-            ctk.CTkLabel(frame_voz, text=f"V{i}", width=60).pack(side="left", padx=2)
-
-            spin_instrument = ctk.CTkEntry(frame_voz, width=120, placeholder_text="1")
+            # Coluna 1: Instrumento
+            spin_instrument = ctk.CTkEntry(
+                frame_tabela, width=120, placeholder_text="1"
+            )
             spin_instrument.insert(0, str(1 if i == 0 else 24 + i * 10))
-            spin_instrument.pack(side="left", padx=2)
+            spin_instrument.grid(row=i + 1, column=1, padx=2, pady=5)
 
+            # Coluna 2: Slider de Volume
             slider_vol = ctk.CTkSlider(
-                frame_voz, from_=0, to=127, width=80, number_of_steps=127
+                frame_tabela, from_=0, to=127, width=80, number_of_steps=127
             )
             slider_vol.set(100 - i * 10)
-            slider_vol.pack(side="left", padx=2)
-            label_vol = ctk.CTkLabel(frame_voz, text=str(100 - i * 10), width=30)
-            label_vol.pack(side="left", padx=2)
+            slider_vol.grid(row=i + 1, column=2, padx=(10, 2), pady=5)
+
+            # Coluna 3: Label Numérico de Volume
+            label_vol = ctk.CTkLabel(frame_tabela, text=str(100 - i * 10), width=30)
+            label_vol.grid(row=i + 1, column=3, padx=(2, 10), pady=5)
             slider_vol.configure(
-                command=lambda v, l=label_vol: l.configure(text=str(int(v)))
+                command=lambda v, lam=label_vol: lam.configure(text=str(int(v)))
             )
 
+            # Coluna 4: Slider de Oitava Base
             slider_oitava = ctk.CTkSlider(
-                frame_voz, from_=0, to=8, width=80, number_of_steps=8
+                frame_tabela, from_=0, to=8, width=80, number_of_steps=8
             )
             slider_oitava.set(6 - i)
-            slider_oitava.pack(side="left", padx=2)
-            label_oit = ctk.CTkLabel(frame_voz, text=str(6 - i), width=30)
-            label_oit.pack(side="left", padx=2)
+            slider_oitava.grid(row=i + 1, column=4, padx=(10, 2), pady=5)
+
+            # Coluna 5: Label Numérico de Oitava
+            label_oit = ctk.CTkLabel(frame_tabela, text=str(6 - i), width=30)
+            label_oit.grid(row=i + 1, column=5, padx=(2, 10), pady=5)
             slider_oitava.configure(
-                command=lambda o, l=label_oit: l.configure(text=str(int(o)))
+                command=lambda o, lam=label_oit: lam.configure(text=str(int(o)))
             )
 
-            spin_delay = ctk.CTkEntry(frame_voz, width=60, placeholder_text="0")
+            # Coluna 6: Atraso
+            spin_delay = ctk.CTkEntry(frame_tabela, width=60, placeholder_text="0")
             spin_delay.insert(0, str(i * 2))
-            spin_delay.pack(side="left", padx=2)
+            spin_delay.grid(row=i + 1, column=6, padx=2, pady=5)
 
             self.vozes_configs.append(
                 {
@@ -187,32 +198,32 @@ class Interface:
             command=self._carregar_arquivo,
             width=150,
         )
-        self.btn_carregar.pack(side="left", padx=5)
+        self.btn_carregar.pack(side="right", padx=5)
 
         self.btn_salvar = ctk.CTkButton(
             frame_botoes, text="💾 Salvar Texto", command=self._salvar_texto, width=150
         )
-        self.btn_salvar.pack(side="left", padx=5)
+        self.btn_salvar.pack(side="right", padx=5)
 
         self.btn_gerar = ctk.CTkButton(
             frame_botoes,
-            text="🎵 Gerar MIDI",
+            text="Gerar MIDI",
             command=self._gerar_midi,
             width=150,
             fg_color="green",
             hover_color="darkgreen",
         )
-        self.btn_gerar.pack(side="right", padx=5)
+        self.btn_gerar.pack(side="left", padx=5)
 
         self.btn_limpar = ctk.CTkButton(
             frame_botoes,
-            text="🗑️ Limpar",
+            text="Reset",
             command=self._limpar_tudo,
             width=150,
             fg_color="red",
             hover_color="darkred",
         )
-        self.btn_limpar.pack(side="right", padx=5)
+        self.btn_limpar.pack(side="left", padx=5)
 
         # Player controls
         frame_player = ctk.CTkFrame(frame_principal)
@@ -220,7 +231,7 @@ class Interface:
 
         self.btn_play = ctk.CTkButton(
             frame_player,
-            text="▶️ Play",
+            text="▶ Play",
             command=self._tocar_musica,
             width=100,
             fg_color="green",
@@ -229,13 +240,13 @@ class Interface:
         self.btn_play.pack(side="left", padx=5)
 
         self.btn_pause = ctk.CTkButton(
-            frame_player, text="⏸️ Pausar", command=self._pausar_musica, width=100
+            frame_player, text="⏸ Pausar", command=self._pausar_musica, width=100
         )
         self.btn_pause.pack(side="left", padx=5)
 
         self.btn_stop = ctk.CTkButton(
             frame_player,
-            text="⏹️ Parar",
+            text="⏹ Parar",
             command=self._parar_musica,
             width=100,
             fg_color="red",
@@ -327,13 +338,13 @@ class Interface:
 
         if not texto:
             messagebox.showwarning("Aviso", "Por favor, insira algum texto musical.")
-            return
+            return False
 
         if not self.gerador_callback:
             messagebox.showinfo(
                 "Info", "Modo de demonstração. Nenhum callback configurado."
             )
-            return
+            return False
 
         bpm = int(self.slider_bpm.get())
 
@@ -374,20 +385,22 @@ class Interface:
 
             if resultado:
                 self._atualizar_status(f"MIDI gerado com sucesso: {resultado}")
-                messagebox.showinfo("Sucesso", f"Arquivo MIDI gerado:\n{resultado}")
                 self.player.current_file = resultado
+                return True
             else:
                 self._atualizar_status("Erro na geração do MIDI.")
         except Exception as e:
             self._atualizar_status(f"Erro: {str(e)}")
             messagebox.showerror("Erro", f"Falha ao gerar MIDI:\n{str(e)}")
+            return False
 
     def _atualizar_status(self, mensagem):
         self.status_label.configure(text=mensagem)
 
     def _tocar_musica(self):
-        if not os.path.exists("saida_gerada.mid"):
-            messagebox.showwarning("Aviso", "Nenhum arquivo MIDI gerado ainda.")
+
+        # Gera o MIDI primeiro. Se falhar, interrompe o fluxo aqui.
+        if not self._gerar_midi():
             return
 
         try:
