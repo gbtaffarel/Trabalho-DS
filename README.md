@@ -1,115 +1,128 @@
-# Trabalho final - Desenvolvimento de software
+# Gerador de Música a Partir de Texto - Fase 2
 
-Esse sistema recebe um arquivo de texto e mapeia os caracteres para uma sequência
-e notas musicais ou ações, que poderá ser reproduzida.
+Este repositório contém a implementação da Fase 2 do Trabalho Prático da disciplina de desenvolvimento de software. O objetivo fundamental é definir, implementar, testar e depurar um software capaz de gerar música a partir da leitura de textos.
 
-Utilizaremos python para o desenvolvimento e optaremos por [mido](https://mido.readthedocs.io/en/latest/#) ou [pygame](https://www.pygame.org/docs/ref/midi.html)
-para a reprodução musical.
+---
 
-## Tabela de mapeamento
+## Instruções para Execução
 
-Essa tabela é uma versão inicial e poderá ser alterada.
+### Requisitos de Software
 
-|Texto|Nota - Ação|
-|:---:|:---:|
-|A|Lá|
-|B|Sí|
-|C|Dó|
-|D|Ré|
-|E|Mi|
-|F|Fá|
-|G|Sol|
-|H|Sí Bb|
-|a,b,c,d,e,f,g,h|Silêncio|
-|Espaço|Dobra volume, se não puder, deixa no máximo|
-|!|Troca para instrumento MIDI #24|
-|O,o,I,i,U,u|Troca para instrumento MIDI #110|
-|Outra Consoante|Se o anterior era nota, repete, caso contrário, silencio|
-|Dígito par|MIDI #(atual + Dígito)|
-|? ou .|Aumenta uma oitava|
-|NL|Troca para instrumento MIDI #123|
-|;|Troca para instrumento MIDI #15|
-|,|Troca para instrumento MIDI #114|
-|Caso contrário|Se o anterior era nota, repete, caso contrário, silencio|
+- Interpretador python instalado
+- make
+- SoundFont (.sf2)
+  - Para linux, verifique se a soundfont está ESPECIFICAMENTE no caminho /usr/share/soundfonts/FluidR3_GM.sf2
 
-## Requisitos Funcionais
+### Primeira execução no linux
 
-1. Ler o texto de entrada na interface gráfica do software.
-2. Interpretar caracteres, aplicando as regras de mapeamento.
-3. Gerar uma saída musical reproduzível.
-4. O usuário deve poder configurar parâmetros iniciais (presets), como BPM,
-instrumento inicial, oitava padrão, volume, etc.
+rode o comando para gerar e ativar o amebiente virtual:
 
-## Requisitos Não Funcionais
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-- Modularidade
-- Baixo acoplameento e alta coesão
-- Principios SOLID
-- Legibilidade e boas práticas
-- Testabilidade
-- Versionamento
+Instale as dependências necessárias:
 
-## Módulos e Classes
+```bash
+make install
+```
 
-### Módulo de interface gráfica
+Verifique se todos os requisitos estão instalados corretamente:
 
-Esse módulo é responsável por criar e gerenciar a interface gráfica, perminitndo
-ao usuário interagir com o o software (entrar o texto, configurar parãmetros
-iniciais e iniciar a reprodução musical).
+```bash
+make check
+```
 
-- Classe interface()
-  - Métodos
-    - desenharInterface()
-    - obterParametrosIniciais()   > Com base no que foi setado na GUI
-    - start()
-    - cancelarReprodução()
+Se tudo estiver correto, pode executar o programa:
 
-### Módulo de entrada de dados
+```bash
+make run
+```
 
-Esse módulo é responsável por obter e validar a entrada do usuário.
+---
 
-- Classe entradaDados()
-  - Métodos
-    - obterTextoEntrada()         > Podemos tentar carregar arquivo
-    - carregarArquivo(caminho)
-    - validarEntrada(texto)
+## Novidades e Funcionalidades da Fase 2
 
-### Módulo de interpretação
+Nesta segunda fase de desenvolvimento, o sistema recebeu atualizações importantes:
 
-Esse módulo é responsável por processar a entrada e gerar a lista de eventos musicais.
+- A entrada de texto pelo usuário pode ser feita através de digitação em campo editável, leitura de um arquivo TXT, ou ambos.
 
-- Classe interpretador()
-  - Métodos
-    - carregarRegras()
-    - interpretar(texto, contexto)  > Função que vai iterar o texto
-    - aplicarRegras(caractere)      > Função que vai aplicar regra caracter por caracter
+- Arquivos de texto modificados na interface podem ser salvos, substituindo o arquivo original.
 
-### Módulo de geração e eventos
+- O sistema agora exporta e salva o arquivo de áudio resultante no formato MIDI.
 
-Esse módulo é responsável por converter a lista de eventos musicais em uma saída
-reproduzível, seja um arquivo MIDI ou uma reprodução direta.
+- O grupo de desenvolvimento define as regras de nomenclatura e o diretório padrão para o salvamento dos arquivos MIDI, ou delega essa escolha ao usuário.
 
-- Classe gerador()
-  - Métodos
-    - tocarNota(nota, oitava, volume, instrumento)
-    - pausar()
-    - alterarInstrumento(IdInstrumento)
-    - setBPM(bpm)
+- Todos os instrumentos musicais do sistema agora seguem o padrão General MIDI (GM), que conta com 128 opções.
 
-### TAD Música
+---
 
-- Classe estadoMusical()          > Guarda o estado atual da interpretação.
-  - volumeAtual
-  - oitavaAtual
-  - instrumentoAtual
-  - ultimoCaractere
+## Mapeamento em Fuga (Polifonia)
 
-### Módulo de Regras
+A alteração mais significativa desta etapa é a mudança estrutural do mapeamento para suportar melodias em "fuga", simulando as composições polifônicas do período Barroco de Johann Sebastian Bach.
 
-Esse módulo visa aumentar a extensibilidade do software e atender ao critério de
-open/closed, sendo responsável por definir as regras de mapeamento entre caracteres
-e eventos musicais, ao invés de ter essas regras hardcoded no módulo de interpretação.
+### Dinâmica das Vozes
 
-### Croqui da interface
+- O arquivo de texto é lido e dividido em linhas.
 
-![croqui](croqui.png)
+- Cada linha processada representa uma voz musical independente (V0, V1, V2, etc.) que tocará de forma simultânea com as demais.
+
+- As quebras de linha funcionam exclusivamente como separadores de vozes e são ignoradas durante a interpretação das notas.
+
+- Para simular as entradas defasadas características de uma fuga, é possível definir um atraso inicial em batidas (beats) para cada voz, inserindo um número entre colchetes no começo da linha (exemplo: `[4]` indica quatro beats de pausa).
+
+### Configuração Inicial por Voz
+
+As vozes recebem valores padrão distintos para permitir o contraste de registros acústicos. A partir da Voz 4, os valores cíclicos de oitava e volume recomeçam.
+
+| Identificador | Oitava Base | Volume Base | Sugestão de Instrumento |
+| --- | --- | --- | --- |
+| **Voz 0** | 6 | 100 | Cravo (GM 6) |
+| **Voz 1** | 5 | 80 | Órgão (GM 20) |
+| **Voz 2** | 4 | 60 | Piano (GM 0) |
+| **Voz 3** | 3 | 40 | Fagote (GM 70) |
+
+### Mapeamento de Caracteres
+
+A leitura individual dos caracteres dentro de uma voz determina as ações musicais do sistema:
+
+- Letras de **A** até **H** representam notas musicais, onde "Mb" corresponde a Mi bemol e "H" corresponde a Si bemol.
+
+- Letras de **a** até **h** (minúsculas) representam pausas.
+
+- O caractere de **espaço** dobra o volume atual da voz, respeitando o limite máximo de 127.
+
+- O caractere **?** sobe em uma oitava a nota da voz atual.
+
+- O caractere **V** desce em uma oitava a nota da voz atual.
+
+- O caractere **!** troca o instrumento da voz atual para Harmônica (GM 22).
+
+- O caractere **;** troca o instrumento da voz atual para Tubular Bells (GM 15).
+
+- O caractere **,** troca o instrumento da voz atual para Church Organ (GM 20).
+
+- O caractere **>** aumenta o andamento geral (BPM) da música em 10 unidades.
+
+- O caractere **<** diminui o andamento geral (BPM) da música em 10 unidades.
+
+- As vogais **O, I, U** e quaisquer outras **consoantes** não especificadas irão repetir a última nota executada.
+
+- Caso nenhuma nota anterior tenha sido registrada, as vogais e consoantes não mapeadas inserem uma pausa.
+
+---
+
+## Fases de Entrega
+
+O desenvolvimento deste trabalho prático é fragmentado nas seguintes entregas:
+
+1. **Requisitos:** Adição de novos requisitos funcionais e não-funcionais à lista concebida na Fase 1 do projeto.
+
+1. **Projeto de Classes:** Reprojeto do modelo funcional, expandindo as classes originais para comportar as novas exigências.
+
+1. **Interface (UI):** Criação de croquis para a nova interface de usuário, seguidos da devida justificativa para os layouts e comportamentos propostos.
+
+1. **Implementação:** Programação de um protótipo, incluindo rotinas de teste e depuração, usando tecnologia e plataforma escolhidas pelo próprio grupo.
+
+1. **Apresentação:** Entrega de documentação final, avaliação de código no GitHub, possível apresentação para a turma e sessão especial de demonstração direta para o professor.
