@@ -16,23 +16,46 @@ class Interpretador:
     def interpretar(self, texto_reader):
         """
         Itera sobre a entrada de texto e delega a aplicação das regras.
+        Cada linha do texto corresponde a uma voz diferente.
         """
-        for _ in range(texto_reader.length()):
-            caractere = texto_reader.next()
+        track_index = 0
+        while not texto_reader.is_empty():
+            linha = texto_reader.next_line()  # Obter a próxima linha
+            if linha is None:
+                break
+            
+            # Processar cada caractere na linha
+            for caractere in linha:
+                if caractere is None:
+                    break
+
+                instrucao = self.tradutor.translate(caractere)
+                self._aplicar_regras(instrucao, track_index)
+            
+            # Avançar para a próxima faixa
+            track_index = (track_index + 1) % 4
+            # Resetar o reader para a próxima linha
+            texto_reader.reset()
+
+    def interpretar_linha(self, linha, track_index):
+        """
+        Interpreta uma única linha de texto (uma voz) e aplica as regras.
+        """
+        for caractere in linha:
             if caractere is None:
                 break
 
             instrucao = self.tradutor.translate(caractere)
-            self._aplicar_regras(instrucao)
+            self._aplicar_regras(instrucao, track_index)
 
-    def _aplicar_regras(self, instrucao):
+    def _aplicar_regras(self, instrucao, track_index):
         """
         Método privado que traduz a instrução em ações reais no MIDI.
         """
         # Se a instrução for um inteiro (Nota Musical)
         if isinstance(instrucao, int):
             nota_real = instrucao + (self.gerador_midi.get_oitava() + 1) * 12
-            self.gerador_midi.add(nota_real)
+            self.gerador_midi.add(nota_real, track_index)
 
             # Atualiza o estado
             self.last_note_value = nota_real
@@ -45,9 +68,9 @@ class Interpretador:
         if comando == "volume":
             valor = instrucao[1]
             if valor == 0:
-                self._tocar_silencio()
+                self._tocar_silencio(track_index)
             elif valor == 2:
-                self._dobrar_volume()
+                self._dobrar_volume(track_index)
 
         elif comando == "instrument":
             self.gerador_midi.set_instrument(instrucao[1])
@@ -61,9 +84,9 @@ class Interpretador:
 
         elif comando == "consonant":
             if self.last_note:
-                self.gerador_midi.add(self.last_note_value)
+                self.gerador_midi.add(self.last_note_value, track_index)
             else:
-                self._tocar_silencio()
+                self._tocar_silencio(track_index)
 
         elif comando == "oitava":
             oitava_atual = self.gerador_midi.get_oitava()
@@ -76,14 +99,14 @@ class Interpretador:
 
     # --- Métodos auxiliares privados (Clean Code) ---
 
-    def _tocar_silencio(self):
+    def _tocar_silencio(self, track_index):
         """Simula um silêncio zerando o volume temporariamente."""
         vol_atual = self.gerador_midi.get_volume()
         self.gerador_midi.set_volume(0)
-        self.gerador_midi.add(self.standard_note)
+        self.gerador_midi.add(self.standard_note, track_index)
         self.gerador_midi.set_volume(vol_atual)
 
-    def _dobrar_volume(self):
+    def _dobrar_volume(self, track_index):
         """Dobra o volume respeitando o limite do MIDI (127)."""
         vol_atual = self.gerador_midi.get_volume()
         novo_vol = vol_atual * 2
