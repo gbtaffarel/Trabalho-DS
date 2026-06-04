@@ -1,7 +1,6 @@
 import os
-import sys
 from reader import reader
-from translator import translator
+from translator import Translator
 from midigen import midigen
 from midi2audio import FluidSynth
 from interpretador import Interpretador
@@ -27,18 +26,18 @@ def executar_cli():
         texto = reader(path)
         texto.load()
 
-        tradutor = translator()
+        tradutor = Translator()
         midi = midigen(volume=127, bpm=120, instrument=1, oitava=4)
         interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
 
+        from interpretador import EstadoVoz
+
+        EstadoVoz.config_vozes = []
+        midi.config_vozes = []
+
         print("Lendo e interpretando o arquivo...")
 
-        linha_num = 0
-        while not texto.is_empty():
-            linha = texto.next_line()
-            if linha is not None:
-                interpretador.interpretar_linha(linha, linha_num % 4)
-            linha_num += 1
+        interpretador.interpretar(texto)
 
     except Exception as e:
         print(f"\n[ERRO FATAL] Ocorreu um problema durante a interpretação: {e}")
@@ -46,7 +45,7 @@ def executar_cli():
 
     arquivo_midi_saida = "saida_gerada.mid"
     arquivo_audio_saida = "saida_gerada.wav"
-    soundfont_path = "FluidR3_GM.sf2"
+    soundfont_path = "/usr/share/soundfonts/FluidR3_GM.sf2"
 
     print("Gerando arquivo MIDI...")
     midi.save_mid(arquivo_midi_saida)
@@ -75,7 +74,7 @@ def processar_midi_gui(dados):
     texto_reader = reader()
     texto_reader.load_from_string(dados["texto"])
 
-    tradutor = translator()
+    tradutor = Translator()
 
     # Inicializa com a configuração da primeira voz
     voz_padrao = dados["vozes"][0]
@@ -88,19 +87,12 @@ def processar_midi_gui(dados):
 
     interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
 
-    linha_num = 0
-    while not texto_reader.is_empty():
-        linha = texto_reader.next_line()
-        if linha is not None:
-            # Atualiza configurações se houver uma aba para essa voz
-            if linha_num < len(dados["vozes"]):
-                voz_atual = dados["vozes"][linha_num]
-                midi.set_instrument(voz_atual["instrumento"])
-                midi.set_volume(voz_atual["volume"])
-                midi.set_oitava(voz_atual["oitava_base"])
+    from interpretador import EstadoVoz
 
-            interpretador.interpretar_linha(linha, linha_num % 4)
-        linha_num += 1
+    EstadoVoz.config_vozes = dados["vozes"]
+    midi.config_vozes = dados["vozes"]
+
+    interpretador.interpretar(texto_reader)
 
     arquivo_saida = "saida_gerada.mid"
     midi.save_mid(arquivo_saida)

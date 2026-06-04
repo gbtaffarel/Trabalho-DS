@@ -471,7 +471,7 @@ class Interface:
 
 if __name__ == "__main__":
     from reader import reader
-    from translator import translator
+    from translator import Translator
     from midigen import midigen
     from interpretador import Interpretador
 
@@ -479,14 +479,14 @@ if __name__ == "__main__":
         """
         Função que recebe os dados da GUI e usa as classes do backend para gerar o MIDI.
         """
-        # 1. Carrega o texto usando o seu reader
+        # Carrega o texto usando o seu reader
         texto_reader = reader()
         texto_reader.load_from_string(dados["texto"])
 
-        # 2. Inicializa o tradutor
-        tradutor = translator()
+        # Inicializa o tradutor
+        tradutor = Translator()
 
-        # 3. Pega as configurações da Voz 0 para a inicialização padrão
+        # Pega as configurações da Voz 0 para a inicialização padrão
         voz_padrao = dados["vozes"][0]
         midi = midigen(
             volume=voz_padrao["volume"],
@@ -495,26 +495,22 @@ if __name__ == "__main__":
             oitava=voz_padrao["oitava_base"],
         )
 
-        # 4. Inicializa o interpretador
+        # Inicializa o interpretador
         interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
 
-        # 5. Processa linha por linha (uma para cada faixa/voz)
-        linha_num = 0
-        while not texto_reader.is_empty():
-            linha = texto_reader.next_line()
-            if linha is not None:
-                # Se houver configuração específica para essa voz na interface, atualiza o MIDI
-                if linha_num < len(dados["vozes"]):
-                    voz_atual = dados["vozes"][linha_num]
-                    midi.set_instrument(voz_atual["instrumento"])
-                    midi.set_volume(voz_atual["volume"])
-                    midi.set_oitava(voz_atual["oitava_base"])
+        # Processa linha por linha (uma para cada faixa/voz)
+        from interpretador import EstadoVoz
 
-                # Interpreta a linha atual na respectiva track
-                interpretador.interpretar_linha(linha, linha_num % 4)
-            linha_num += 1
+        EstadoVoz.config_vozes = dados[
+            "vozes"
+        ]  # Injetando configuração estática para as vozes
+        midi.config_vozes = dados[
+            "vozes"
+        ]  # Injetando configuração estática para o gerador MIDI
 
-        # 6. Salva o arquivo e retorna o nome para a interface saber que deu certo
+        interpretador.interpretar(texto_reader)
+
+        # Salva o arquivo e retorna o nome para a interface saber que deu certo
         arquivo_saida = "saida_gerada.mid"
         midi.save_mid(arquivo_saida)
         return arquivo_saida
