@@ -18,33 +18,34 @@ class Comando:
 
 class Translator:
     def __init__(self):
-
-        # Tokeniza para facilitar a identificação
+        # Captura atrasos [n], notas com b bemol e caracteres individuais
         self.padrao_tokens = re.compile(r"\[(\d+)\]|Mb|mb|.")
+
+        # Mapeamento de Notas Musicais (Fase 1)
         self.notas = {
             "A": 69,
             "B": 71,
-            "H": 70,
             "C": 60,
             "D": 62,
             "E": 64,
-            "Mb": 63,
             "F": 65,
             "G": 67,
+            "H": 70,  # Nota H (Si bemol)
+            "Mb": 63,
+            "mb": 63,  # Nota Ré sustenido / Mi bemol
         }
 
     def analisar_linha(self, linha: str) -> List[Union[Nota, Comando]]:
         """
         Lê uma linha inteira de texto, extrai os tokens via regex e retorna uma lista de instruções estruturadas.
         """
-
         instrucoes = []
 
         for match in self.padrao_tokens.finditer(linha):
             token_completo = match.group(0)
             grupo_atraso = match.group(1)
 
-            # Trata o caso especifico do atraso [n]
+            # Regra de Atraso [n] (Fase 2)
             if grupo_atraso is not None:
                 valor_atraso = int(grupo_atraso)
                 instrucoes.append(Comando(acao="atraso", parametro=valor_atraso))
@@ -54,87 +55,57 @@ class Translator:
             if instrucao:
                 instrucoes.append(instrucao)
 
+        # Simula o efeito da quebra de linha '\n' da Fase 1 (muda instrumento para 123)
+        instrucoes.append(Comando(acao="instrumento", parametro=123))
+
         return instrucoes
 
     def _traduzir_token(self, token: str) -> Union[Nota, Comando, None]:
-        """
-        Recebe um token isolado (ex: "Mb", "C", ">", " ") e retorna o objeto correspondente.
-        """
-
-        # Analisa notas
+        # Notas Musicais Puras
         if token in self.notas:
             return Nota(valor=self.notas[token])
 
-        # Analisa alterador de bpm
-        elif token == ">":
-            return Comando(acao="bpm", parametro=10)
-        elif token == "<":
-            return Comando(acao="bpm", parametro=-10)
+        c = token.lower()
 
-        # Analisa alterador de oitava
-        elif token == "?":
-            return Comando(acao="oitava", parametro=1)
-        elif token == "V":
-            return Comando(acao="oitava", parametro=-1)
-
-        elif token == " ":
-            return Comando(acao="volume", parametro=2)
-        elif token == "!":
-            return Comando(acao="instrumento", parametro=22)
-
-        elif token == ";":
-            return Comando(acao="instrumento", parametro=15)
-        elif token == ",":
-            return Comando(acao="instrumento", parametro=20)
-
-        # Pausas (a-h minúsculas)
-        elif token in ["a", "b", "h", "c", "d", "e", "mb", "f", "g"]:
+        # Pausas (Letras minúsculas de 'a' a 'h' e 'mb')
+        if c in "abcdefgh" or token in ["mb"]:
             return Comando(acao="pausa", parametro=None)
 
-        # Vogais soltas e consoantes (Repetição/Consonante)
-        elif token.isalpha():  # Se for letra e não caiu nas regras acima
-            return Comando(acao="consoante", parametro=None)
+        # Alteradores de Volume (Espaço duplica o volume)
+        if token == " ":
+            return Comando(acao="volume", parametro=2)
 
-        # Caracteres não mapeados
-        return None
+        # Alteradores de Oitava (+1 ou -1)
+        if token == "?":
+            return Comando(acao="oitava", parametro=1)
+        if token == "V":
+            return Comando(acao="oitava", parametro=-1)
 
-    #   CODIGO DA PRIMEIRA FASE
-    #   def translate(self, char):
-    #     if char in self.notas:
-    #         teste = self.notas.get(char)
-    #         return teste
-    #
-    #     # Transforma o caractere para minusculo para facilitar comparacoes
-    #     c = char.lower()
-    #
-    #     if c in "abcdefgh":
-    #         return ["volume", 0]
-    #
-    #     if c == " ":
-    #         return ["volume", 2]
-    #
-    #     if c == "!":
-    #         return ["instrument", 24]
-    #
-    #     if c in "oiu":
-    #         return ["instrument", 110]
-    #
-    #     if c in "jklmnpqrstvwxyz":
-    #         return ["consonant"]
-    #
-    #     if char.isdigit() and int(char) % 2 == 0:
-    #         return ["instrument+", int(char)]
-    #
-    #     if c == "?":
-    #         return ["oitava"]
-    #
-    #     if c == "\n":
-    #         return ["instrument", 123]
-    #
-    #     if c == ";" or (char.isdigit() and int(char) % 2 != 0):
-    #         return ["instrument", 15]
-    #
-    #     if c == ",":
-    #         return ["instrument", 114]
-    #
-    #     return ["consonant"]
+        # Alteradores de BPM (Fase 2: +10 ou -10)
+        if token == ">":
+            return Comando(acao="bpm", parametro=10)
+        if token == "<":
+            return Comando(acao="bpm", parametro=-10)
+
+        # Instrumentos Mapeados por Caractere
+        if token == "!":
+            return Comando(acao="instrumento", parametro=24)  # Nylon Guitar
+        if token == ";":
+            return Comando(acao="instrumento", parametro=15)  # Pizzicato Strings
+        if token == ",":
+            return Comando(acao="instrumento", parametro=114)  # Agogo
+        if c in "oiu":
+            return Comando(acao="instrumento", parametro=110)  # Fiddle
+
+        # Regra de Dígitos Numéricos
+        if token.isdigit():
+            valor = int(token)
+            if valor % 2 == 0:
+                # Dígito par: Soma o valor ao instrumento atual
+                return Comando(acao="instrumento_add", parametro=valor)
+            else:
+                # Dígito ímpar: Altera para o instrumento 15
+                return Comando(acao="instrumento", parametro=15)
+
+        # Consoantes e Fallback (Repetição de nota / Silêncio)
+        return Comando(acao="consoante", parametro=None)
