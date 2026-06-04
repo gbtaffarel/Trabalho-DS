@@ -2,8 +2,10 @@
 ifeq ($(OS),Windows_NT)
     # Configurações para Windows
     OS_TYPE := Windows
-    PYTHON := venv/Scripts/python.exe
-    PIP := venv/Scripts/pip.exe
+    SYS_PYTHON := python
+    PYTHON := .venv/Scripts/python.exe
+    PIP := .venv/Scripts/pip.exe
+    ACTIVATE := call .venv\Scripts\activate.bat
     RM := del /q /f
     RMDIR := rmdir /s /q
     # No Windows, comandos como 'test -f' não existem nativamente, 
@@ -12,8 +14,10 @@ ifeq ($(OS),Windows_NT)
 else
     # Configurações para Linux / macOS
     OS_TYPE := POSIX
-    PYTHON := venv/bin/python
-    PIP := venv/bin/pip3
+    SYS_PYTHON := python3
+    PYTHON := .venv/bin/python
+    PIP := .venv/bin/pip3
+    ACTIVATE := . .venv/bin/activate
     RM := rm -f
     RMDIR := rm -rf
     CHECK_FILE := test -f
@@ -22,7 +26,7 @@ endif
 # Dependências
 DEPS := mido customtkinter midi2audio pygame
 
-.PHONY: help install check run clean clean-all
+.PHONY: help install check run run-cli clean clean-all
 
 # Meta-alvo padrão
 .DEFAULT_GOAL := help
@@ -30,14 +34,21 @@ DEPS := mido customtkinter midi2audio pygame
 help:
 	@echo "Gerador de Trilhas Sonoras MIDI - Sistema Detectado: $(OS_TYPE)"
 	@echo ""
-	@echo "  make install    - Instala as dependências necessárias"
+	@echo "  make install    - Cria a venv (se não existir) e instala as dependências"
 	@echo "  make check      - Verifica se as dependências estão instaladas"
 	@echo "  make run        - Executa o programa (interface gráfica)"
 	@echo "  make run-cli    - Executa o programa em modo CLI"
 	@echo "  make clean      - Remove arquivos MIDI e áudio gerados"
 	@echo "  make clean-all  - Remove arquivos gerados e __pycache__"
 
-install:
+# Alvo responsável por criar a venv se a pasta não existir
+.venv:
+	@echo "Criando ambiente virtual (.venv)..."
+	$(SYS_PYTHON) -m venv .venv
+	@echo "Ambiente virtual criado com sucesso!"
+
+# Ao chamar install, o Make verifica se .venv existe primeiro
+install: .venv
 	@echo "Instalando dependências em $(OS_TYPE)..."
 	$(PIP) install $(DEPS)
 	@echo "Pronto!"
@@ -47,21 +58,22 @@ check:
 	@$(PYTHON) -c "import mido; print('✓ mido instalado')" || echo "✗ mido não encontrado"
 	@$(PYTHON) -c "import customtkinter; print('✓ customtkinter instalado')" || echo "✗ customtkinter não encontrado"
 	@$(PYTHON) -c "import midi2audio; print('✓ midi2audio instalado')" || echo "✗ midi2audio não encontrado"
+	@$(PYTHON) -W ignore -c "import os; os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = 'hide'; import pygame; print('✓ pygame instalado')" || echo "✗ pygame não encontrado"
 	@echo ""
 	@echo "Verificando SoundFont..."
 ifeq ($(OS),Windows_NT)
-	@if exist FluidR3_GM.sf2 (echo ✓ FluidR3_GM.sf2 encontrado) else (echo ⚠ FluidR3_GM.sf2 não encontrado)
+	@echo "✓ Windows detectado (Sintetizador nativo será utilizado para reprodução)"
 else
-	@test -f FluidR3_GM.sf2 && echo "✓ FluidR3_GM.sf2 encontrado" || echo "⚠ FluidR3_GM.sf2 não encontrado"
+	@test -f /usr/share/soundfonts/FluidR3_GM.sf2 && echo "✓ FluidR3_GM.sf2 encontrado" || echo "⚠ FluidR3_GM.sf2 não encontrado"
 endif
 
-run:
+run: .venv
 	@echo "Iniciando Gerador de Trilhas Sonoras..."
-	$(PYTHON) src/interface.py
+	@$(ACTIVATE) && $(PYTHON) src/interface.py
 
-run-cli:
+run-cli: .venv
 	@echo "Executando em modo CLI..."
-	$(PYTHON) src/main.py --cli --file natal.txt
+	@$(ACTIVATE) && $(PYTHON) src/main.py --cli --file natal.txt
 
 clean:
 	@echo "Limpando arquivos de saída..."
