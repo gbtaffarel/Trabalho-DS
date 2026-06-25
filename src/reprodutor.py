@@ -25,9 +25,18 @@ class Reprodutor:
                 pygame.mixer.init(frequency=44100)
             self.mixer_available = True
             print("Mixer inicializado com sucesso.")
-        except Exception as e:
+        except pygame.error as e:  # <-- Usamos o erro específico do pygame
             self.mixer_available = False
-            print(f"Aviso: pygame mixer não disponível. Funções desativadas. Erro: {e}")
+            print(
+                f"Aviso: pygame mixer não disponível. Funções de áudio desativadas. Detalhes: {e}"
+            )
+        except (
+            OSError
+        ) as e:  # <-- Tratamos falhas do sistema operativo (ex: drivers de áudio)
+            self.mixer_available = False
+            print(
+                f"Aviso: Falha no sistema operativo ao aceder ao áudio. Detalhes: {e}"
+            )
 
     def tocar(self, arquivo_midi):
         if not os.path.exists(arquivo_midi):
@@ -43,8 +52,11 @@ class Reprodutor:
             self.current_file = arquivo_midi
             self.is_playing = True
             self.is_paused = False
-        except Exception as e:
-            raise RuntimeError(f"Erro ao reproduzir: {e}")
+        except pygame.error as e:
+            # O 'from e' encadeia a exceção, preservando a causa original para depuração
+            raise RuntimeError(
+                f"Falha interna do pygame ao tentar reproduzir '{arquivo_midi}'"
+            ) from e
 
     def pausar(self):
         if not self.mixer_available:
@@ -99,7 +111,7 @@ if __name__ == "__main__":
     caminho_arquivo = os.path.join("..", "saida_gerada.mid")
 
     if os.path.exists(caminho_arquivo):
-        print(f"Tocando o arquivo: {caminho_arquivo}")
+        print(f"Tocando o ficheiro: {caminho_arquivo}")
         player.tocar(caminho_arquivo)
 
         try:
@@ -107,7 +119,7 @@ if __name__ == "__main__":
             while pygame.mixer.music.get_busy():
                 time.sleep(0.1)  # Verifica a cada 0.1s para responder mais rápido
         except KeyboardInterrupt:
-            print("\nReprodução interrompida pelo usuário.")
+            print("\nReprodução interrompida pelo utilizador.")
         finally:
             # Garante que o estado interno do reprodutor é limpo
             player.parar()
@@ -119,5 +131,5 @@ if __name__ == "__main__":
             print("Teste finalizado com sucesso.")
             sys.exit(0)  # Força o Python a fechar o programa corretamente
     else:
-        print(f"ERRO: Arquivo não encontrado em '{caminho_arquivo}'")
+        print(f"ERRO: Ficheiro não encontrado em '{caminho_arquivo}'")
         sys.exit(1)
