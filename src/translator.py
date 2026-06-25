@@ -21,7 +21,7 @@ class Translator:
         # Captura atrasos [n], notas com b bemol e caracteres individuais
         self.padrao_tokens = re.compile(r"\[(\d+)\]|Mb|mb|.")
 
-        # Mapeamento de Notas Musicais (Fase 1)
+        # Mapeamento Declarativo de Notas Musicais (Fase 1)
         self.notas = {
             "A": 69,
             "B": 71,
@@ -33,6 +33,18 @@ class Translator:
             "H": 70,  # Nota H (Si bemol)
             "Mb": 63,
             "mb": 63,  # Nota Ré sustenido / Mi bemol
+        }
+
+        # Mapeamento Declarativo de Comandos (Substitui os Switch Statements)
+        self.comandos_diretos = {
+            " ": ("volume", 2),
+            "?": ("oitava", 1),
+            "V": ("oitava", -1),
+            ">": ("bpm", 10),
+            "<": ("bpm", -10),
+            "!": ("instrumento", 24),  # Nylon Guitar
+            ";": ("instrumento", 15),  # Pizzicato Strings
+            ",": ("instrumento", 114),  # Agogo
         }
 
     def analisar_linha(self, linha: str) -> List[Union[Nota, Comando]]:
@@ -61,51 +73,27 @@ class Translator:
         return instrucoes
 
     def _traduzir_token(self, token: str) -> Union[Nota, Comando, None]:
-        # Notas Musicais Puras
+        # 1. Notas Musicais Puras (Resolve o conflito do 'mb')
         if token in self.notas:
             return Nota(valor=self.notas[token])
 
-        c = token.lower()
+        # 2. Comandos Mapeados (Remove a cadeia longa de if-else)
+        if token in self.comandos_diretos:
+            acao, param = self.comandos_diretos[token]
+            return Comando(acao=acao, parametro=param)
 
-        # Pausas (Letras minúsculas de 'a' a 'h' e 'mb')
-        if c in "abcdefgh" or token in ["mb"]:
+        # 3. Pausas (Letras minúsculas de 'a' a 'h')
+        if token in "abcdefgh":
             return Comando(acao="pausa", parametro=None)
 
-        # Alteradores de Volume (Espaço duplica o volume)
-        if token == " ":
-            return Comando(acao="volume", parametro=2)
-
-        # Alteradores de Oitava (+1 ou -1)
-        if token == "?":
-            return Comando(acao="oitava", parametro=1)
-        if token == "V":
-            return Comando(acao="oitava", parametro=-1)
-
-        # Alteradores de BPM (Fase 2: +10 ou -10)
-        if token == ">":
-            return Comando(acao="bpm", parametro=10)
-        if token == "<":
-            return Comando(acao="bpm", parametro=-10)
-
-        # Instrumentos Mapeados por Caractere
-        if token == "!":
-            return Comando(acao="instrumento", parametro=24)  # Nylon Guitar
-        if token == ";":
-            return Comando(acao="instrumento", parametro=15)  # Pizzicato Strings
-        if token == ",":
-            return Comando(acao="instrumento", parametro=114)  # Agogo
-        if c in "oiu":
-            return Comando(acao="instrumento", parametro=110)  # Fiddle
-
-        # Regra de Dígitos Numéricos
+        # 4. Regra Algorítmica (Dígitos Numéricos)
         if token.isdigit():
             valor = int(token)
             if valor % 2 == 0:
-                # Dígito par: Soma o valor ao instrumento atual
                 return Comando(acao="instrumento_add", parametro=valor)
-            else:
-                # Dígito ímpar: Altera para o instrumento 15
-                return Comando(acao="instrumento", parametro=15)
+            return Comando(acao="instrumento", parametro=15)
 
-        # Consoantes e Fallback (Repetição de nota / Silêncio)
+        # 5. Fallback: Consoantes e Vogais O, I, U
+        # (Corrige o bug da especificação: 'o', 'i', 'u' agora repetem a nota
+        # tal como qualquer outra consoante não mapeada)
         return Comando(acao="consoante", parametro=None)
