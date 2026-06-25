@@ -1,8 +1,7 @@
 import os
-from reader import reader
-from translator import Translator
-from midigen import midigen
-from interpretador import Interpretador
+from interface import Interface
+from interpretador import ConfigVoz
+from gerar_musica import GerarMusica
 
 
 def executar_cli():
@@ -22,31 +21,27 @@ def executar_cli():
     print("\nInicializando módulos...")
 
     try:
-        texto = reader(path)
-        texto.load()
+        # No modo CLI original, o texto vinha de um ficheiro
+        with open(path, "r", encoding="utf-8") as f:
+            texto_bruto = f.read()
 
-        tradutor = Translator()
-        midi = midigen(volume=127, bpm=120, instrument=1, oitava=4)
-        interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
+        # O CLI usava valores fixos por padrão
+        vozes_cli = [ConfigVoz(instrumento=1, volume=127, oitava_base=4, delay=0)]
 
-        from interpretador import EstadoVoz
-
-        EstadoVoz.config_vozes = []
-        midi.config_vozes = []
+        gerador = GerarMusica()
+        arquivo_midi_saida = "saida_gerada.mid"
 
         print("Lendo e interpretando o arquivo...")
-
-        interpretador.interpretar(texto)
+        gerador.executar(
+            texto=texto_bruto,
+            bpm=120,
+            vozes=vozes_cli,
+            arquivo_saida=arquivo_midi_saida,
+        )
 
     except Exception as e:
         print(f"\n[ERRO FATAL] Ocorreu um problema durante a interpretação: {e}")
         return
-
-    arquivo_midi_saida = "saida_gerada.mid"
-
-    print("Gerando arquivo MIDI...")
-    midi.save_mid(arquivo_midi_saida)
-    print(f"[SUCESSO] Arquivo MIDI salvo como: {arquivo_midi_saida}")
 
 
 def processar_midi_gui(dados):
@@ -54,32 +49,13 @@ def processar_midi_gui(dados):
     Função Callback injetada na Interface Gráfica.
     Recebe o dicionário de dados da interface e processa o MIDI.
     """
-    texto_reader = reader()
-    texto_reader.load_from_string(dados["texto"])
-
-    tradutor = Translator()
-
-    # Inicializa com a configuração da primeira voz
-    voz_padrao = dados["vozes"][0]
-    midi = midigen(
-        volume=voz_padrao.volume,
+    gerador = GerarMusica()
+    return gerador.executar(
+        texto=dados["texto"],
         bpm=dados["bpm"],
-        instrument=voz_padrao.instrumento,
-        oitava=voz_padrao.oitava_base,
+        vozes=dados["vozes"],
+        arquivo_saida="saida_gerada.mid",
     )
-
-    interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)
-
-    from interpretador import EstadoVoz
-
-    EstadoVoz.config_vozes = dados["vozes"]
-    midi.config_vozes = dados["vozes"]
-
-    interpretador.interpretar(texto_reader)
-
-    arquivo_saida = "saida_gerada.mid"
-    midi.save_mid(arquivo_saida)
-    return arquivo_saida
 
 
 def executar_gui():
@@ -99,26 +75,16 @@ def executar_gui():
         executar_cli()
 
 
-def main():
-    """Função principal que roteia a escolha do usuário."""
-    print("=" * 40)
-    print(" Gerador de Trilha Sonora MIDI ")
-    print("=" * 40)
-
-    escolha = (
-        input(
-            "Deseja executar com Interface Gráfica (G) ou Linha de Comando (C)? [G/C]: "
-        )
-        .strip()
-        .upper()
-    )
-
-    if escolha == "C":
-        executar_cli()
-    else:
-        # Padrão é carregar a GUI se escolher 'G' ou apertar Enter vazio
-        executar_gui()
-
-
 if __name__ == "__main__":
-    main()
+
+    def processar_midi(dados):
+        """
+        Função que recebe os dados da GUI e usa o serviço central para gerar o MIDI.
+        """
+        gerador = GerarMusica()
+        return gerador.executar(
+            texto=dados["texto"], bpm=dados["bpm"], vozes=dados["vozes"]
+        )
+
+    app = Interface(gerador_callback=processar_midi)
+    app.iniciar()

@@ -346,7 +346,7 @@ class Interface:
             return False
         bpm = int(self.slider_bpm.get())
         vozes = []
-        for i, config in enumerate(self.vozes_configs):
+        for _, config in enumerate(self.vozes_configs):
             try:
                 instrumento = int(config["instrumento"].get() or 0)
                 instrumento = max(0, min(127, instrumento))
