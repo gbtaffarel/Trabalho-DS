@@ -24,7 +24,7 @@ else
 endif
 
 # Dependências
-DEPS := mido customtkinter midi2audio pygame
+DEPS := mido customtkinter midi2audio pygame-ce
 
 .PHONY: help install check run run-cli clean clean-all
 

@@ -2,7 +2,6 @@ import os
 from reader import reader
 from translator import Translator
 from midigen import midigen
-from midi2audio import FluidSynth
 from interpretador import Interpretador
 
 
@@ -44,26 +43,10 @@ def executar_cli():
         return
 
     arquivo_midi_saida = "saida_gerada.mid"
-    arquivo_audio_saida = "saida_gerada.wav"
-    soundfont_path = "/usr/share/soundfonts/FluidR3_GM.sf2"
 
     print("Gerando arquivo MIDI...")
     midi.save_mid(arquivo_midi_saida)
     print(f"[SUCESSO] Arquivo MIDI salvo como: {arquivo_midi_saida}")
-
-    if os.path.exists(soundfont_path):
-        print("Convertendo MIDI para áudio (WAV)...")
-        try:
-            fs = FluidSynth(soundfont_path)
-            fs.midi_to_audio(arquivo_midi_saida, arquivo_audio_saida)
-            print(f"[SUCESSO] Áudio WAV salvo como: {arquivo_audio_saida}")
-        except Exception as e:
-            print(f"\n[AVISO] Falha ao converter para WAV: {e}")
-    else:
-        print(f"\n[AVISO] Soundfont '{soundfont_path}' não encontrado no diretório.")
-        print(
-            "A geração de áudio (.wav) foi ignorada. Você ainda pode ouvir o .mid gerado."
-        )
 
 
 def processar_midi_gui(dados):
@@ -79,10 +62,10 @@ def processar_midi_gui(dados):
     # Inicializa com a configuração da primeira voz
     voz_padrao = dados["vozes"][0]
     midi = midigen(
-        volume=voz_padrao["volume"],
+        volume=voz_padrao.volume,
         bpm=dados["bpm"],
-        instrument=voz_padrao["instrumento"],
-        oitava=voz_padrao["oitava_base"],
+        instrument=voz_padrao.instrumento,
+        oitava=voz_padrao.oitava_base,
     )
 
     interpretador = Interpretador(gerador_midi=midi, tradutor=tradutor)

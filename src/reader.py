@@ -49,4 +49,3 @@ class reader:
     # Metodo para resetar a posicao do cursor de leitura
     def reset(self):
         self.char_pos = 0
-

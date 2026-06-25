@@ -6,6 +6,7 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import threading
 import time
+from interpretador import ConfigVoz
 from reprodutor import Reprodutor
 
 
@@ -335,19 +336,15 @@ class Interface:
 
     def _gerar_midi(self):
         texto = self.caixa_texto.get("1.0", "end").strip()
-
         if not texto:
             messagebox.showwarning("Aviso", "Por favor, insira algum texto musical.")
             return False
-
         if not self.gerador_callback:
             messagebox.showinfo(
                 "Info", "Modo de demonstração. Nenhum callback configurado."
             )
             return False
-
         bpm = int(self.slider_bpm.get())
-
         vozes = []
         for i, config in enumerate(self.vozes_configs):
             try:
@@ -355,25 +352,17 @@ class Interface:
                 instrumento = max(0, min(127, instrumento))
             except ValueError:
                 instrumento = 1
-
             volume = int(config["volume"].get())
             oitava = int(config["oitava"].get())
-
             try:
                 delay = int(config["delay"].get() or 0)
                 delay = max(0, delay)
             except ValueError:
                 delay = 0
-
-            vozes.append(
-                {
-                    "voz_id": i,
-                    "instrumento": instrumento,
-                    "volume": volume,
-                    "oitava_base": oitava,
-                    "delay": delay,
-                }
+            nova_voz = ConfigVoz(
+                instrumento=instrumento, volume=volume, oitava_base=oitava, delay=delay
             )
+            vozes.append(nova_voz)
 
         dados = {"texto": texto, "bpm": bpm, "vozes": vozes}
 
@@ -450,20 +439,19 @@ class Interface:
         bpm = int(self.slider_bpm.get())
 
         vozes = []
-        for i, config in enumerate(self.vozes_configs):
+        for _, config in enumerate(self.vozes_configs):
             try:
                 instrumento = int(config["instrumento"].get() or 0)
             except ValueError:
                 instrumento = 1
 
             vozes.append(
-                {
-                    "voz_id": i,
-                    "instrumento": max(0, min(127, instrumento)),
-                    "volume": int(config["volume"].get()),
-                    "oitava_base": int(config["oitava"].get()),
-                    "delay": int(config["delay"].get() or 0),
-                }
+                ConfigVoz(
+                    instrumento=instrumento,
+                    volume=int(config["volume"].get()),
+                    oitava_base=int(config["oitava"].get()),
+                    delay=int(config["delay"].get() or 0),
+                )
             )
 
         return {"texto": texto, "bpm": bpm, "vozes": vozes}
@@ -489,10 +477,10 @@ if __name__ == "__main__":
         # Pega as configurações da Voz 0 para a inicialização padrão
         voz_padrao = dados["vozes"][0]
         midi = midigen(
-            volume=voz_padrao["volume"],
+            volume=voz_padrao.volume,
             bpm=dados["bpm"],
-            instrument=voz_padrao["instrumento"],
-            oitava=voz_padrao["oitava_base"],
+            instrument=voz_padrao.instrumento,
+            oitava=voz_padrao.oitava_base,
         )
 
         # Inicializa o interpretador

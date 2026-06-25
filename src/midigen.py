@@ -54,7 +54,7 @@ class midigen:
                 and self.config_vozes
                 and track_index < len(self.config_vozes)
             ):
-                atraso_inicial = self.config_vozes[track_index].get("delay", 0)
+                atraso_inicial = self.config_vozes[track_index].delay
                 for _ in range(atraso_inicial):
                     track.append(
                         Message(

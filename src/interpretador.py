@@ -4,6 +4,22 @@ from typing import ClassVar
 
 
 @dataclass
+class ConfigVoz:
+    instrumento: int
+    volume: int
+    oitava_base: int
+    delay: int = 0
+
+    def __post_init__(self):
+        if not 0 <= self.instrumento <= 127:
+            raise ValueError("Instrumento deve estar entre 0 e 127")
+        if not 0 <= self.volume <= 127:
+            raise ValueError("Volume deve estar entre 0 e 127")
+        if self.delay < 0:
+            raise ValueError("Atraso nao pode ser negativo")
+
+
+@dataclass
 class EstadoVoz:
     id_voz: int
     oitava_atual: int
@@ -21,9 +37,9 @@ class EstadoVoz:
             cfg = cls.config_vozes[id_voz]
             return cls(
                 id_voz=id_voz,
-                oitava_atual=cfg["oitava_base"],
-                volume_atual=cfg["volume"],
-                instrumento_atual=cfg["instrumento"],
+                oitava_atual=cfg.oitava_base,
+                volume_atual=cfg.volume,
+                instrumento_atual=cfg.instrumento,
             )
 
         # Fallback padrão
@@ -37,6 +53,21 @@ class EstadoVoz:
             volume_atual=ciclo_volumes[idx],
             instrumento_atual=ciclo_instrumentos[idx],
         )
+
+    def dobrar_volume(self):
+        self.volume_atual = min(127, self.volume_atual * 2)
+
+    def alterar_oitava(self, deslocamento):
+        nova_oitava = self.oitava_atual + deslocamento
+        if 0 <= nova_oitava <= 9:
+            self.oitava_atual = nova_oitava
+
+    def registrar_nota(self, nota):
+        self.ultima_nota = nota
+        self.tocou_nota = True
+
+    def registrar_pausa(self):
+        self.tocou_nota = False
 
 
 class Interpretador:
@@ -97,15 +128,17 @@ class Interpretador:
 
         self.gerador_midi.set_volume(estado.volume_atual)
         self.gerador_midi.add(nota_real, track_index)
-        estado.ultima_nota = nota_real
-        estado.tocou_nota = True
+        estado.registrar_nota(nota_real)
 
     def _dobrar_volume(self, parametro, estado: EstadoVoz, track_index):
-        """Dobra o volume local da voz, respeitando o limite máximo de 127."""
-        novo_vol = estado.volume_atual * 2
-        if novo_vol > 127:
-            novo_vol = 127
-        estado.volume_atual = novo_vol
+        estado.dobrar_volume()
+
+    def _mudar_oitava(self, parametro, estado: EstadoVoz, track_index):
+        estado.alterar_oitava(parametro)
+
+    def _tocar_pausa(self, parametro, estado: EstadoVoz, track_index):
+        self.gerador_midi.add(0, track_index, volume=0)
+        estado.registrar_pausa()
 
     def _mudar_instrumento(self, parametro, estado: EstadoVoz, track_index):
         estado.instrumento_atual = parametro
@@ -116,12 +149,6 @@ class Interpretador:
         estado.instrumento_atual = novo_inst
         self.gerador_midi.set_instrument(novo_inst, track_index)
 
-    def _mudar_oitava(self, parametro, estado: EstadoVoz, track_index):
-        """Aumenta ou diminui a oitava atual da voz. O parâmetro é um inteiro positivo ou negativo."""
-        nova_oitava = estado.oitava_atual + parametro
-        if 0 <= nova_oitava <= 9:
-            estado.oitava_atual = nova_oitava
-
     def _aplicar_atraso(self, parametro, estado: EstadoVoz, track_index):
         for _ in range(parametro):
             self._tocar_pausa(None, estado, track_index)
@@ -130,11 +157,6 @@ class Interpretador:
         bpm_atual = 60000000 / self.gerador_midi.get_bpm()
         novo_bpm = max(40, int(bpm_atual) + parametro)
         self.gerador_midi.set_bpm(novo_bpm)
-
-    def _tocar_pausa(self, parametro, estado: EstadoVoz, track_index):
-        """Simula silencio"""
-        self.gerador_midi.add(0, track_index, volume=0)
-        estado.tocou_nota = False
 
     def _tocar_consoante(self, parametro, estado: EstadoVoz, track_index):
         if estado.tocou_nota:
