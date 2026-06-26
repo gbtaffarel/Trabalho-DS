@@ -32,9 +32,9 @@ class EstadoVoz:
     config_vozes: ClassVar[list] = []
 
     @classmethod
-    def criar(cls, id_voz: int):
-        if cls.config_vozes and id_voz < len(cls.config_vozes):
-            cfg = cls.config_vozes[id_voz]
+    def criar(cls, id_voz: int, config_vozes: list = None):
+        if config_vozes and id_voz < len(config_vozes):
+            cfg = config_vozes[id_voz]
             return cls(
                 id_voz=id_voz,
                 oitava_atual=cfg.oitava_base,
@@ -71,13 +71,14 @@ class EstadoVoz:
 
 
 class Interpretador:
-    def __init__(self, gerador_midi, tradutor):
+    def __init__(self, gerador_midi, tradutor, config_vozes=None):
         """
         Aplica o princípio de Inversão de Dependência (SOLID).
         A classe recebe os objetos prontos em vez de instanciá-los internamente.
         """
         self.gerador_midi = gerador_midi
         self.tradutor = tradutor
+        self.config_vozes = config_vozes or []
 
         self._regras = {
             "volume": self._dobrar_volume,
@@ -101,7 +102,7 @@ class Interpretador:
             if linha is None:
                 break
 
-            estado = EstadoVoz.criar(track_index)
+            estado = EstadoVoz.criar(track_index, config_vozes=self.config_vozes)
 
             self.gerador_midi.set_instrument(estado.instrumento_atual, track_index)
 
