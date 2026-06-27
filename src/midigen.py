@@ -4,8 +4,8 @@ MICROSEGUNDOS_POR_MINUTO = 60000000  # 60 milhoes
 
 
 class midigen:
-    def __init__(self, volume, bpm, instrument, oitava):
-        self.config_vozes = []
+    def __init__(self, volume, bpm, instrument, oitava, config_vozes=None):
+        self.config_vozes = config_vozes or []
         self.res = MidiFile()
         self.tracks = [MidiTrack() for _ in range(4)]  # Criar 4 faixas
         for track in self.tracks:

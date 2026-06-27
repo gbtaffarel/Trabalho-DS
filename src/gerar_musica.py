@@ -34,15 +34,13 @@ class GerarMusica:
             bpm=bpm,
             instrument=voz_padrao.instrumento,
             oitava=voz_padrao.oitava_base,
+            config_vozes=vozes,
         )
 
         # 4. Inicializa o Interpretador injetando as dependências
         interpretador = Interpretador(
             gerador_midi=midi, tradutor=tradutor, config_vozes=vozes
         )
-
-        # 5. Injeta as configurações estáticas (estado global das vozes)
-        midi.config_vozes = vozes
 
         # 6. Executa a interpretação e salva o ficheiro
         interpretador.interpretar(texto_reader)
