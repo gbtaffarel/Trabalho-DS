@@ -314,7 +314,7 @@ class Interface:
                 self._atualizar_status(
                     f"Ficheiro carregado: {os.path.basename(arquivo)}"
                 )
-            except Exception as e:
+            except OSError as e:
                 messagebox.showerror(
                     "Erro", f"Não foi possível carregar o ficheiro:\n{str(e)}"
                 )
@@ -331,7 +331,7 @@ class Interface:
                 with open(arquivo, "w", encoding="utf-8") as f:
                     f.write(conteudo)
                 self._atualizar_status(f"Texto salvo em: {os.path.basename(arquivo)}")
-            except Exception as e:
+            except OSError as e:
                 messagebox.showerror(
                     "Erro", f"Não foi possível salvar o ficheiro:\n{str(e)}"
                 )
