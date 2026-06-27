@@ -1,6 +1,6 @@
-from reader import reader
+from reader import Reader
 from translator import Translator
-from midigen import midigen
+from midigen import Midigen
 from interpretador import Interpretador, EstadoVoz, ConfigVoz
 
 
@@ -18,7 +18,7 @@ class GerarMusica:
         arquivo_saida: str = "saida_gerada.mid",
     ) -> str:
         # 1. Carrega o texto
-        texto_reader = reader()
+        texto_reader = Reader()
         texto_reader.load_from_string(texto)
 
         # 2. Inicializa o Tradutor
@@ -29,7 +29,7 @@ class GerarMusica:
             vozes[0] if vozes else ConfigVoz(instrumento=1, volume=100, oitava_base=5)
         )
 
-        midi = midigen(
+        midi = Midigen(
             volume=voz_padrao.volume,
             bpm=bpm,
             instrument=voz_padrao.instrumento,

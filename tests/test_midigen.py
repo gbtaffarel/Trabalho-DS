@@ -1,5 +1,5 @@
 import pytest
-from src.midigen import midigen, MICROSEGUNDOS_POR_MINUTO
+from src.midigen import Midigen, MICROSEGUNDOS_POR_MINUTO
 from src.interpretador import ConfigVoz
 
 
@@ -9,7 +9,7 @@ def test_calculo_bpm_constante():
     corretamente (ex: 120 bpm -> 500.000 microssegundos).
     """
     bpm_inicial = 120
-    midi = midigen(volume=100, bpm=bpm_inicial, instrument=1, oitava=4)
+    midi = Midigen(volume=100, bpm=bpm_inicial, instrument=1, oitava=4)
 
     esperado = int(MICROSEGUNDOS_POR_MINUTO / bpm_inicial)
     assert midi.get_bpm() == esperado
@@ -28,7 +28,7 @@ def test_midigen_injecao_dependencias():
     vozes = [ConfigVoz(instrumento=1, volume=100, oitava_base=4, delay=2)]
 
     # Instanciação completa numa única etapa
-    midi = midigen(volume=100, bpm=120, instrument=1, oitava=4, config_vozes=vozes)
+    midi = Midigen(volume=100, bpm=120, instrument=1, oitava=4, config_vozes=vozes)
 
     assert midi.config_vozes == vozes
     assert len(midi.config_vozes) == 1

@@ -1,7 +1,7 @@
 # Esse modulo eh responsavel por ler o arquivo de entrada do programa
 
 
-class reader:
+class Reader:
     def __init__(self, path=None):
         self.path = path  # caminho do arquivo de entrada
         self.content = ""
