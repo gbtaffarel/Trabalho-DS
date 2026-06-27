@@ -24,9 +24,9 @@ else
 endif
 
 # Dependências
-DEPS := mido customtkinter midi2audio pygame-ce
+DEPS := mido customtkinter midi2audio pygame-ce pytest
 
-.PHONY: help install check run run-cli clean clean-all
+.PHONY: help install check run test clean clean-all
 
 # Meta-alvo padrão
 .DEFAULT_GOAL := help
@@ -37,6 +37,7 @@ help:
 	@echo "  make install    - Cria a venv (se não existir) e instala as dependências"
 	@echo "  make check      - Verifica se as dependências estão instaladas"
 	@echo "  make run        - Executa o programa (interface gráfica)"
+	@echo "  make test       - Executa toda a suite de testes unitários"
 	@echo "  make clean      - Remove arquivos MIDI e áudio gerados"
 	@echo "  make clean-all  - Remove arquivos gerados e __pycache__"
 
@@ -69,6 +70,10 @@ endif
 run: .venv
 	@echo "Iniciando Gerador de Trilhas Sonoras..."
 	@$(ACTIVATE) && $(PYTHON) src/interface.py
+
+test: .venv
+	@echo "Executando a suite de testes..."
+	@$(ACTIVATE) && PYTHONPATH=src pytest tests/ -v
 
 clean:
 	@echo "Limpando arquivos de saída..."
