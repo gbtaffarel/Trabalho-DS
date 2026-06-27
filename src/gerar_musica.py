@@ -1,6 +1,6 @@
 from reader import Reader
 from translator import Translator
-from midigen import Midigen
+from midigen import MidiGen
 from interpretador import Interpretador, EstadoVoz, ConfigVoz
 
 
@@ -29,7 +29,7 @@ class GerarMusica:
             vozes[0] if vozes else ConfigVoz(instrumento=1, volume=100, oitava_base=5)
         )
 
-        midi = Midigen(
+        midi = MidiGen(
             volume=voz_padrao.volume,
             bpm=bpm,
             instrument=voz_padrao.instrumento,

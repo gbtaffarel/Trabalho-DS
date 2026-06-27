@@ -3,7 +3,7 @@ from mido import Message, MidiFile, MidiTrack, MetaMessage
 MICROSEGUNDOS_POR_MINUTO = 60000000  # 60 milhoes
 
 
-class Midigen:
+class MidiGen:
     def __init__(self, volume, bpm, instrument, oitava, config_vozes=None):
         self.config_vozes = config_vozes or []
         self.res = MidiFile()
