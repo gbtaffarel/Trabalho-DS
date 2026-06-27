@@ -37,7 +37,6 @@ help:
 	@echo "  make install    - Cria a venv (se não existir) e instala as dependências"
 	@echo "  make check      - Verifica se as dependências estão instaladas"
 	@echo "  make run        - Executa o programa (interface gráfica)"
-	@echo "  make run-cli    - Executa o programa em modo CLI"
 	@echo "  make clean      - Remove arquivos MIDI e áudio gerados"
 	@echo "  make clean-all  - Remove arquivos gerados e __pycache__"
 
@@ -70,10 +69,6 @@ endif
 run: .venv
 	@echo "Iniciando Gerador de Trilhas Sonoras..."
 	@$(ACTIVATE) && $(PYTHON) src/interface.py
-
-run-cli: .venv
-	@echo "Executando em modo CLI..."
-	@$(ACTIVATE) && $(PYTHON) src/main.py --cli --file natal.txt
 
 clean:
 	@echo "Limpando arquivos de saída..."
