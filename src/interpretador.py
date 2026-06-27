@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from translator import Nota, Comando
 from typing import ClassVar
 
+OITAVA_PADRAO = [6, 5, 4, 3]
+VOLUME_PADRAO = [100, 80, 60, 40]
+INSTRUMENTO_PADRAO = [6, 20, 0, 70]
+
 
 @dataclass
 class ConfigVoz:
@@ -43,15 +47,12 @@ class EstadoVoz:
             )
 
         # Fallback padrão
-        ciclo_oitavas = [6, 5, 4, 3]
-        ciclo_volumes = [100, 80, 60, 40]
-        ciclo_instrumentos = [6, 20, 0, 70]
         idx = id_voz % 4
         return cls(
             id_voz=id_voz,
-            oitava_atual=ciclo_oitavas[idx],
-            volume_atual=ciclo_volumes[idx],
-            instrumento_atual=ciclo_instrumentos[idx],
+            oitava_atual=OITAVA_PADRAO[idx],
+            volume_atual=VOLUME_PADRAO[idx],
+            instrumento_atual=INSTRUMENTO_PADRAO[idx],
         )
 
     def dobrar_volume(self):

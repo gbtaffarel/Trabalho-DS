@@ -1,5 +1,7 @@
 from mido import Message, MidiFile, MidiTrack, MetaMessage
 
+MICROSEGUNDOS_POR_MINUTO = 60000000  # 60 milhoes
+
 
 class midigen:
     def __init__(self, volume, bpm, instrument, oitava):
@@ -10,7 +12,7 @@ class midigen:
             self.res.tracks.append(track)  # type: ignore
 
         self.volume = volume
-        self.bpm = int(60000000 / bpm)
+        self.bpm = int(MICROSEGUNDOS_POR_MINUTO / bpm)
 
         # Amarra cada faixa ao seu próprio canal (channel=i) para suportar polifonia
         for i, track in enumerate(self.tracks):
@@ -78,7 +80,7 @@ class midigen:
                 )  # type: ignore
 
     def set_bpm(self, bpm):
-        self.bpm = int(60000000 / bpm)
+        self.bpm = int(MICROSEGUNDOS_POR_MINUTO / bpm)
         for track in self.tracks:
             track.append(MetaMessage("set_tempo", tempo=self.bpm, time=0))  # type: ignore
 
