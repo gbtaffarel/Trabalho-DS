@@ -9,12 +9,10 @@ if sys.platform.startswith("linux"):
 
 class Reprodutor:
     def __init__(self):
-        self.current_file = None
         self.is_playing = False
         self.is_paused = False
         self.mixer_available = False
 
-        # A inicialização ocorre APENAS quando a classe é instanciada
         self._inicializar_mixer()
 
     def _inicializar_mixer(self):
@@ -49,7 +47,6 @@ class Reprodutor:
         try:
             pygame.mixer.music.load(arquivo_midi)
             pygame.mixer.music.play()
-            self.current_file = arquivo_midi
             self.is_playing = True
             self.is_paused = False
         except pygame.error as e:

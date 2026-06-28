@@ -3,12 +3,11 @@
 
 class Reader:
     def __init__(self, path=None):
-        self.path = path  # caminho do arquivo de entrada
+        self.path = path
         self.content = ""
-        self.pos = 0  # Posicao do cursor de leitura
-        self.lines = []  # Lista de linhas do arquivo
-        self.line_pos = 0  # Posicao da linha atual
-        self.char_pos = 0  # Posicao do caractere na linha atual
+        self.pos = 0
+        self.lines = []
+        self.line_pos = 0
 
     def load(self):
         with open(self.path, "r") as f:
@@ -21,7 +20,6 @@ class Reader:
         self.lines = text.splitlines()
         self.pos = 0
         self.line_pos = 0
-        self.char_pos = 0
 
     # Metodo para iterar sobre a string, caracter por caracter
     def next(self):
@@ -48,4 +46,4 @@ class Reader:
 
     # Metodo para resetar a posicao do cursor de leitura
     def reset(self):
-        self.char_pos = 0
+        pass

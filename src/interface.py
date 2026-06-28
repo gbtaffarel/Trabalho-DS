@@ -449,7 +449,6 @@ class Interface:
 
         try:
             self._atualizar_status("A gerar MIDI...")
-            self.janela.update_idletasks()
             resultado = self.player_controller.gerador_callback(dados)
             if resultado:
                 self._atualizar_status(f"MIDI gerado com sucesso: {resultado}")

@@ -46,7 +46,6 @@ def test_tocar_arquivo_sucesso(mock_exists, mock_pygame):
     player = Reprodutor()
     player.tocar("musica_valida.mid")
 
-    assert player.current_file == "musica_valida.mid"
     assert player.is_playing is True
     assert player.is_paused is False
 
