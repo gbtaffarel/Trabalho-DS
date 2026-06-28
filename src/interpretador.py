@@ -1,6 +1,9 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from dataclasses import dataclass
 from translator import Nota, Comando
-from typing import ClassVar
 
 OITAVA_PADRAO = [6, 5, 4, 3]
 VOLUME_PADRAO = [100, 80, 60, 40]
@@ -31,9 +34,6 @@ class EstadoVoz:
     instrumento_atual: int
     ultima_nota: int = 60
     tocou_nota: bool = False
-
-    # Declarando explicitamente para o Python reconhecer que existe
-    config_vozes: ClassVar[list] = []
 
     @classmethod
     def criar(cls, id_voz: int, config_vozes: list = None):
@@ -156,8 +156,8 @@ class Interpretador:
             self._tocar_pausa(None, estado, track_index)
 
     def _mudar_bpm(self, parametro, estado: EstadoVoz, track_index):
-        bpm_atual = 60000000 / self.gerador_midi.get_bpm()
-        novo_bpm = max(40, int(bpm_atual) + parametro)
+        bpm_atual = self.gerador_midi.get_actual_bpm()
+        novo_bpm = max(40, bpm_atual + parametro)
         self.gerador_midi.set_bpm(novo_bpm)
 
     def _tocar_consoante(self, parametro, estado: EstadoVoz, track_index):

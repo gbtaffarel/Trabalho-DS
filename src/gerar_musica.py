@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from reader import Reader
 from translator import Translator
 from midigen import MidiGen

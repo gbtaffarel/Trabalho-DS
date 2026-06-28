@@ -1,28 +1,59 @@
+from dataclasses import dataclass
 from mido import Message, MidiFile, MidiTrack, MetaMessage
 
-MICROSEGUNDOS_POR_MINUTO = 60000000  # 60 milhoes
+MICROSEGUNDOS_POR_MINUTO = 60000000
+
+
+@dataclass
+class MidiConfig:
+    volume: int = 100
+    bpm: int = 120
+    instrument: int = 0
+    oitava: int = 4
+    config_vozes: list = None
+
+    def __post_init__(self):
+        if self.config_vozes is None:
+            self.config_vozes = []
 
 
 class MidiGen:
-    def __init__(self, volume, bpm, instrument, oitava, config_vozes=None):
-        self.config_vozes = config_vozes or []
+    def __init__(self, volume=100, bpm=120, instrument=0, oitava=4, config_vozes=None):
+        """
+        Args:
+            volume: Volume padrão (0-127)
+            bpm: Beats por minuto (deve ser > 0)
+            instrument: Instrumento MIDI (0-127)
+            oitava: Parâmetro aceito por compatibilidade (não utilizado)
+            config_vozes: Lista de configurações de vozes
+        """
+        if bpm <= 0:
+            raise ValueError("BPM deve ser maior que zero")
+        if not isinstance(volume, MidiConfig) and not 0 <= volume <= 127:
+            raise ValueError("Volume deve estar entre 0 e 127")
+        if isinstance(volume, MidiConfig):
+            config = volume
+            self.volume = config.volume
+            self.bpm = int(MICROSEGUNDOS_POR_MINUTO / config.bpm)
+            self.instrument = config.instrument
+            self.config_vozes = config.config_vozes or []
+        else:
+            self.volume = volume
+            self.bpm = int(MICROSEGUNDOS_POR_MINUTO / bpm)
+            self.instrument = instrument
+            self.config_vozes = config_vozes or []
+
         self.res = MidiFile()
-        self.tracks = [MidiTrack() for _ in range(4)]  # Criar 4 faixas
+        self.tracks = [MidiTrack() for _ in range(4)]
         for track in self.tracks:
-            self.res.tracks.append(track)  # type: ignore
+            self.res.tracks.append(track)
 
-        self.volume = volume
-        self.bpm = int(MICROSEGUNDOS_POR_MINUTO / bpm)
-
-        # Amarra cada faixa ao seu próprio canal (channel=i) para suportar polifonia
         for i, track in enumerate(self.tracks):
-            track.append(MetaMessage("set_tempo", tempo=self.bpm, time=0))  # type: ignore
+            track.append(MetaMessage("set_tempo", tempo=self.bpm, time=0))
             track.append(
-                Message("program_change", program=instrument, time=0, channel=i)
-            )  # type: ignore
+                Message("program_change", program=self.instrument, time=0, channel=i)
+            )
 
-        self.instrument = instrument
-        self.oitava = oitava
         self.ticks = 480
 
     def add(self, nota, track_index=0, volume=None):
@@ -33,7 +64,7 @@ class MidiGen:
             # Força as notas a tocarem no canal exclusivo da voz
             track.append(
                 Message("note_on", note=nota, velocity=vel, time=0, channel=track_index)
-            )  # type: ignore
+            )
             track.append(
                 Message(
                     "note_off",
@@ -42,15 +73,16 @@ class MidiGen:
                     time=self.ticks,
                     channel=track_index,
                 )
-            )  # type: ignore
+            )
         else:
             raise IndexError("Índice de faixa inválido")
 
     def set_instrument(self, instrument, track_index=None):
         self.instrument = instrument
-        if track_index is not None and 0 <= track_index < len(self.tracks):
+        target_tracks = []
+        is_single_track = track_index is not None and 0 <= track_index < len(self.tracks)
+        if is_single_track:
             track = self.tracks[track_index]
-
             if (
                 len(track) == 2
                 and self.config_vozes
@@ -65,51 +97,34 @@ class MidiGen:
                             velocity=0,
                             time=self.ticks,
                             channel=track_index,
-                        )  # type: ignore
+                        )
                     )
-
-            track.append(
-                Message(
-                    "program_change", program=instrument, time=0, channel=track_index
-                )
-            )  # type: ignore
+            target_tracks = [track]
         else:
-            for i, track in enumerate(self.tracks):
-                track.append(
-                    Message("program_change", program=instrument, time=0, channel=i)
-                )  # type: ignore
+            target_tracks = self.tracks
+
+        for i, track in enumerate(target_tracks):
+            channel = track_index if is_single_track else i
+            track.append(
+                Message("program_change", program=instrument, time=0, channel=channel)
+            )
 
     def set_bpm(self, bpm):
+        if bpm <= 0:
+            raise ValueError("BPM deve ser maior que zero")
         self.bpm = int(MICROSEGUNDOS_POR_MINUTO / bpm)
         for track in self.tracks:
-            track.append(MetaMessage("set_tempo", tempo=self.bpm, time=0))  # type: ignore
+            track.append(MetaMessage("set_tempo", tempo=self.bpm, time=0))
 
     def set_volume(self, volume):
+        if not 0 <= volume <= 127:
+            raise ValueError("Volume deve estar entre 0 e 127")
         self.volume = volume
 
-    def set_ticks(self, ticks):
-        self.ticks = ticks
-
-    def set_oitava(self, oitava):
-        self.oitava = oitava
-
-    def get_instrument(self):
-        return self.instrument
-
-    def get_volume(self):
-        return self.volume
-
-    def get_bpm(self):
-        return self.bpm
-
-    def get_ticks(self):
-        return self.ticks
-
-    def get_oitava(self):
-        return self.oitava
+    def get_actual_bpm(self):
+        """Retorna o BPM real (não microsegundos por batida)."""
+        return int(MICROSEGUNDOS_POR_MINUTO / self.bpm) if self.bpm != 0 else 0
 
     def save_mid(self, name):
-        # Toda a lógica falha e os loops não utilizados foram removidos.
-        # Isso corrige tanto o bug do "assovio" (instrumento 123)
-        # quanto os erros "i is not accessed" e "type is unknown" no seu editor.
+        """Salva o arquivo MIDI no disco."""
         self.res.save(name)

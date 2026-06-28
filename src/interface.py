@@ -6,8 +6,97 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import threading
 import time
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
 from interpretador import ConfigVoz
 from reprodutor import Reprodutor
+
+
+class MusicPlayerController:
+    """Controla a reprodução de música, isolando a lógica de playback da Interface."""
+
+    def __init__(self, reprodutor, gerador_callback):
+        self.reprodutor = reprodutor
+        self.gerador_callback = gerador_callback
+        self.playing = False
+        self.progress_bar = None
+        self.status_callback = None
+
+    def set_progress_bar(self, progress_bar):
+        self.progress_bar = progress_bar
+
+    def set_status_callback(self, callback):
+        self.status_callback = callback
+
+    def _atualizar_status(self, mensagem):
+        if self.status_callback:
+            self.status_callback(mensagem)
+
+    def _atualizar_progresso(self):
+        if self.playing:
+            def update_progress():
+                while self.playing and self.reprodutor.esta_ativo():
+                    if self.progress_bar:
+                        self.progress_bar.set(min(self.progress_bar.get() + 0.01, 1.0))
+                    time.sleep(0.1)
+                if not self.playing and self.progress_bar:
+                    self.progress_bar.set(0)
+
+            threading.Thread(target=update_progress, daemon=True).start()
+
+    def _gerar_midi(self, texto, bpm, vozes):
+        if not texto:
+            return False
+        if not self.gerador_callback:
+            return False
+
+        dados = {"texto": texto, "bpm": bpm, "vozes": vozes}
+
+        try:
+            self._atualizar_status("A gerar MIDI...")
+            resultado = self.gerador_callback(dados)
+            if resultado:
+                self._atualizar_status(f"MIDI gerado com sucesso: {resultado}")
+                return resultado
+            else:
+                self._atualizar_status("Erro na geração do MIDI.")
+        except Exception as e:
+            self._atualizar_status(f"Erro: {str(e)}")
+        return False
+
+    def tocar(self, texto, bpm, vozes):
+        resultado = self._gerar_midi(texto, bpm, vozes)
+        if not resultado:
+            return False
+        try:
+            self.reprodutor.tocar(resultado)
+            self.playing = True
+            self._atualizar_status("A reproduzir...")
+            self._atualizar_progresso()
+            return True
+        except Exception as e:
+            messagebox.showerror("Erro", f"Falha ao reproduzir: {e}")
+            return False
+
+    def pausar(self):
+        if self.reprodutor.esta_tocando():
+            self.reprodutor.pausar()
+            self.playing = False
+            self._atualizar_status("Pausado")
+        elif self.reprodutor.esta_pausado():
+            self.reprodutor.despausar()
+            self.playing = True
+            self._atualizar_status("A reproduzir...")
+            self._atualizar_progresso()
+
+    def parar(self):
+        self.reprodutor.parar()
+        self.playing = False
+        if self.progress_bar:
+            self.progress_bar.set(0)
+        self._atualizar_status("Reprodução parada")
 
 
 class VoiceConfigView(ctk.CTkFrame):
@@ -132,8 +221,6 @@ class Interface:
     """
 
     def __init__(self, gerador_callback=None):
-        self.gerador_callback = gerador_callback
-
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
@@ -142,8 +229,7 @@ class Interface:
         self.janela.geometry("900x1000")
         self.janela.resizable(True, True)
 
-        self.player = Reprodutor()
-        self.playing = False
+        self.player_controller = MusicPlayerController(Reprodutor(), gerador_callback)
 
         self._criar_layout()
 
@@ -288,6 +374,7 @@ class Interface:
         )
         self.progresso_bar.pack(side="left", padx=10, fill="x", expand=True)
         self.progresso_bar.set(0)
+        self.player_controller.set_progress_bar(self.progresso_bar)
 
     def _criar_status(self):
         self.status_label = ctk.CTkLabel(
@@ -348,13 +435,12 @@ class Interface:
         if not texto:
             messagebox.showwarning("Aviso", "Por favor, insira algum texto musical.")
             return False
-        if not self.gerador_callback:
+        if not self.player_controller.gerador_callback:
             messagebox.showinfo(
                 "Info", "Modo de demonstração. Nenhum callback configurado."
             )
             return False
 
-        # Aqui o código ficou extremamente limpo. A UI apenas pede à Tabela as configurações formatadas.
         dados = {
             "texto": texto,
             "bpm": int(self.slider_bpm.get()),
@@ -364,17 +450,16 @@ class Interface:
         try:
             self._atualizar_status("A gerar MIDI...")
             self.janela.update_idletasks()
-            resultado = self.gerador_callback(dados)
+            resultado = self.player_controller.gerador_callback(dados)
             if resultado:
                 self._atualizar_status(f"MIDI gerado com sucesso: {resultado}")
-                self.player.current_file = resultado
                 return True
             else:
                 self._atualizar_status("Erro na geração do MIDI.")
         except Exception as e:
             self._atualizar_status(f"Erro: {str(e)}")
             messagebox.showerror("Erro", f"Falha ao gerar MIDI:\n{str(e)}")
-            return False
+        return False
 
     def _atualizar_status(self, mensagem):
         self.status_label.configure(text=mensagem)
@@ -382,46 +467,17 @@ class Interface:
     # --- Controlo de Reprodução ---
 
     def _tocar_musica(self):
-        if not self._gerar_midi():
-            return
-        try:
-            self.player.tocar("saida_gerada.mid")
-            self.playing = True
-            self._atualizar_status("A reproduzir...")
-            self._atualizar_progresso()
-        except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao reproduzir: {e}")
+        texto = self.caixa_texto.get("1.0", "end").strip()
+        self.player_controller.set_status_callback(self._atualizar_status)
+        self.player_controller.tocar(texto, int(self.slider_bpm.get()), self.tabela_vozes.obter_configs())
 
     def _pausar_musica(self):
-        if self.player.esta_tocando():
-            self.player.pausar()
-            self.playing = False
-            self._atualizar_status("Pausado")
-        elif self.player.esta_pausado():
-            self.player.despausar()
-            self.playing = True
-            self._atualizar_status("A reproduzir...")
-            self._atualizar_progresso()
-        else:
-            self._tocar_musica()
+        self.player_controller.set_status_callback(self._atualizar_status)
+        self.player_controller.pausar()
 
     def _parar_musica(self):
-        self.player.parar()
-        self.playing = False
-        self.progresso_bar.set(0)
-        self._atualizar_status("Reprodução parada")
-
-    def _atualizar_progresso(self):
-        if self.playing:
-
-            def update_progress():
-                while self.playing and self.player.esta_ativo():
-                    self.progresso_bar.set(min(self.progresso_bar.get() + 0.01, 1.0))
-                    time.sleep(0.1)
-                if not self.playing:
-                    self.progresso_bar.set(0)
-
-            threading.Thread(target=update_progress, daemon=True).start()
+        self.player_controller.set_status_callback(self._atualizar_status)
+        self.player_controller.parar()
 
     def iniciar(self):
         self.janela.mainloop()
